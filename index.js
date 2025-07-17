@@ -27,6 +27,11 @@ const userRoutes = require("./routes/userRoutes");
 const visitesRoutes = require("./routes/visitesRoutes");
 const clubRoutes = require("./routes/clubRoutes");
 const voteRoutes = require("./routes/voteRoutes");
+const quizzvideoRoutes = require("./routes/quizzvideoRoutes");
+const reglementarbitrageRoutes = require("./routes/reglementarbitrageRoutes");
+const commissionRoutes = require("./routes/commissionRoutes");
+const articlesCommissionsRoutes = require("./routes/articlesCommissionsRoutes");
+const teamLigueRoutes = require("./routes/teamLigueRoutes");
 
 // Utilisez vos routes
 app.use(contactformRoutes);
@@ -38,6 +43,11 @@ app.use(userRoutes);
 app.use(visitesRoutes);
 app.use(clubRoutes);
 app.use(voteRoutes);
+app.use(quizzvideoRoutes);
+app.use(reglementarbitrageRoutes);
+app.use(commissionRoutes);
+app.use(articlesCommissionsRoutes);
+app.use(teamLigueRoutes);
 app.use("/admin", adminRoutes);
 app.use("/api", userRoutes);
 

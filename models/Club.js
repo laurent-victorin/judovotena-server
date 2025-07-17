@@ -43,6 +43,7 @@ const Club = sequelize.define(
     numero_club: {
       type: DataTypes.STRING, // Numéro du club
     },
+    coordonnees_gps: DataTypes.STRING,
   },
 
   {

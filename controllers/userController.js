@@ -252,6 +252,30 @@ const userController = {
     }
   },
 
+  // Fonction pour mettre à jour les informations d'un utilisateur (nom, prénom, email, rôle)
+  updateUserInfo: async (req, res, next) => {
+    const { userId } = req.params; // Récupère l'identifiant de l'utilisateur depuis les paramètres
+    const { nom, prenom, email, role_id } = req.body; // Récupère les données du corps de la requête  
+    try {
+      const user = await Users.findByPk(userId); // Cherche l'utilisateur par son ID
+      if (user) {
+        // Mise à jour des champs si présents dans la requête
+        if (nom) user.nom = nom;
+        if (prenom) user.prenom = prenom;
+        if (email) user.email = email;
+        if (role_id) user.role_id = role_id; // Mise à jour du rôle
+        await user.save(); // Sauvegarde les modifications dans la base de données
+        res.json(user); // Retourne l'utilisateur mis à jour
+      } else {
+        res.status(404).send("Utilisateur non trouvé");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de l'utilisateur :", error);
+      // En cas d'erreur, on utilise le contrôleur d'erreur pour gérer la réponse
+      errorController._500(error, req, res);  
+    }
+  },
+
   /////////////////////////////////////////////////////////////////////////////////
 
   getAllUsers: async (req, res, next) => {

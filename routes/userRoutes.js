@@ -190,6 +190,12 @@ router.patch(
 // Route pour mettre à jour le role d'un utilisateur
 router.put("/api/users/:userId/updateRole", cw(userController.updateUserRole));
 
+// Route pour mettre à jour le nom, prenom, email et rôle d'un utilisateur
+router.put(
+  "/api/users/:userId/updateUserInfo",
+  cw(userController.updateUserInfo)
+);
+
 /// DELETE
 // Route pour supprimer un utilisateur
 router.delete("/api/users/:userId/deleteUser", cw(userController.deleteUser));

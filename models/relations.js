@@ -8,6 +8,35 @@ const Question = require("./Question");
 const Choice = require("./Choice");
 const Ballot = require("./Ballot");
 const UserVoteToken = require("./UserVoteToken");
+const Commissions = require("./Commissions");
+const TeamLigue = require("./TeamLigue");
+const ArticlesCommissions = require("./ArticlesCommissions");
+
+// Associations entre ArticlesCommissions et Commissions
+// Une commission peut avoir plusieurs articles
+// Un article appartient à une seule commission
+ArticlesCommissions.belongsTo(Commissions, {
+  foreignKey: "commission_id", // Clé étrangère dans ArticlesCommissions pointant vers Commissions
+  as: "commission", // Alias pour cette association
+});
+
+Commissions.hasMany(ArticlesCommissions, {
+  foreignKey: "commission_id", // Clé étrangère dans ArticlesCommissions pointant vers Commissions
+  as: "articles", // Alias pour cette association
+});
+
+// Associations entre Commissions et TeamLigue
+// Une commission peut avoir plusieurs membres d'équipe
+// Un membre d'équipe peut appartenir à plusieurs commissions
+Commissions.hasMany(TeamLigue, {
+  foreignKey: "commission_id", // Clé étrangère dans TeamLigue pointant vers Commissions
+  as: "members", // Alias pour cette association
+});
+
+TeamLigue.belongsTo(Commissions, {
+  foreignKey: "commission_id", // Clé étrangère dans TeamLigue pointant vers Commissions
+  as: "commission", // Alias pour cette association
+});
 
 // Associations entre Club et User
 // Un club appartient à un utilisateur
