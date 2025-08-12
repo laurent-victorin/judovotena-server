@@ -26,3 +26,4 @@ module.exports = Role;
 // 4: "Arbitre",
 // 5: "Responsable Arbitrage",
 // 6: "Membre de la Ligue NA",
+// 7: "Responsables Comités",

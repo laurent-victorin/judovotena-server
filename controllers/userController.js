@@ -255,7 +255,7 @@ const userController = {
   // Fonction pour mettre à jour les informations d'un utilisateur (nom, prénom, email, rôle)
   updateUserInfo: async (req, res, next) => {
     const { userId } = req.params; // Récupère l'identifiant de l'utilisateur depuis les paramètres
-    const { nom, prenom, email, role_id } = req.body; // Récupère les données du corps de la requête  
+    const { nom, prenom, email, role_id } = req.body; // Récupère les données du corps de la requête
     try {
       const user = await Users.findByPk(userId); // Cherche l'utilisateur par son ID
       if (user) {
@@ -272,7 +272,7 @@ const userController = {
     } catch (error) {
       console.error("Erreur lors de la mise à jour de l'utilisateur :", error);
       // En cas d'erreur, on utilise le contrôleur d'erreur pour gérer la réponse
-      errorController._500(error, req, res);  
+      errorController._500(error, req, res);
     }
   },
 
@@ -307,27 +307,27 @@ const userController = {
   },
 
   addUser: async (req, res, next) => {
-    const { nom, prenom, email, password } = req.body;
+    const { nom, prenom, email, password, role_id } = req.body;
 
     try {
-      // Hacher le mot de passe avant de stocker l'utilisateur
+      // Vérifier que le rôle est valide
+      const allowedRoles = [2, 3, 4];
+      const finalRoleId = allowedRoles.includes(role_id) ? role_id : 2;
+
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      // Créer l'utilisateur avec un rôle par défaut
       const newUser = await Users.create({
         nom,
         prenom,
         email,
         password: hashedPassword,
-        role_id: 2, // Rôle Démo par défaut pour les utilisateurs
+        role_id: finalRoleId,
         photoURL:
-          "https://res.cloudinary.com/dy5kblr32/image/upload/v1715177107/images/utilisateurs/user_avatar_ecd77h.jpg", // URL de photo par défaut
+          "https://res.cloudinary.com/dy5kblr32/image/upload/v1715177107/images/utilisateurs/user_avatar_ecd77h.jpg",
       });
 
-      // Récupérer l'administrateur pour l'envoi du message
+      // Message à l’admin
       const adminUser = await Users.findOne({ where: { role_id: 1 } });
-
-      // Si un administrateur est trouvé, envoyer un message
       if (adminUser) {
         await Message.create({
           sender_id: newUser.id,
@@ -339,32 +339,29 @@ const userController = {
         });
       }
 
+      // Message de bienvenue
       await Message.create({
         sender_id: adminUser ? adminUser.id : null,
         recipient_id: newUser.id,
         subject: "Bienvenue sur notre plateforme",
         content: `
-        <p>Bonjour ${prenom} ${nom},</p>
-        <p>Bienvenue sur notre plateforme. Nous sommes ravis de vous compter parmi nous ! N'hésitez pas à explorer nos fonctionnalités et à nous contacter si besoin.</p>
-        <p>Cordialement,<br />L'équipe Support.</p>
-        `,
+      <p>Bonjour ${prenom} ${nom},</p>
+      <p>Bienvenue sur notre plateforme. Nous sommes ravis de vous compter parmi nous !</p>
+      <p>Cordialement,<br />L'équipe Support.</p>
+      `,
         read_message: false,
         is_copy: false,
       });
 
-      // Répondre au client uniquement après toutes les opérations réussies
       return res.status(201).json({
         message: "Utilisateur créé avec succès.",
         user: newUser,
       });
     } catch (error) {
-      // Envoyer une réponse d'erreur si aucune n'a encore été envoyée
       if (!res.headersSent) {
         console.error("Erreur lors de l'ajout de l'utilisateur :", error);
         return res.status(500).json({ error: "Erreur serveur." });
       }
-
-      // En cas d'erreur supplémentaire, appeler le middleware suivant
       next(error);
     }
   },

@@ -11,6 +11,13 @@ const UserVoteToken = require("./UserVoteToken");
 const Commissions = require("./Commissions");
 const TeamLigue = require("./TeamLigue");
 const ArticlesCommissions = require("./ArticlesCommissions");
+const Annonces = require("./Annonces");
+
+// Association entre Annonces et Users
+Annonces.belongsTo(Users, {
+  foreignKey: "user_id",
+  as: "user",
+});
 
 // Associations entre ArticlesCommissions et Commissions
 // Une commission peut avoir plusieurs articles
@@ -89,7 +96,6 @@ Message.belongsTo(Users, {
 // Relation entre User et ResetPwd
 ResetPwd.belongsTo(Users, { foreignKey: "reset_pwd_user_id" });
 Users.hasMany(ResetPwd, { foreignKey: "reset_pwd_user_id" });
-
 
 ////////////////////////////
 // VOTE ET SONDAGES

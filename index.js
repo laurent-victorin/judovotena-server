@@ -32,6 +32,7 @@ const reglementarbitrageRoutes = require("./routes/reglementarbitrageRoutes");
 const commissionRoutes = require("./routes/commissionRoutes");
 const articlesCommissionsRoutes = require("./routes/articlesCommissionsRoutes");
 const teamLigueRoutes = require("./routes/teamLigueRoutes");
+const annoncesRoutes = require("./routes/annoncesRoutes");
 
 // Utilisez vos routes
 app.use(contactformRoutes);
@@ -48,6 +49,8 @@ app.use(reglementarbitrageRoutes);
 app.use(commissionRoutes);
 app.use(articlesCommissionsRoutes);
 app.use(teamLigueRoutes);
+app.use(annoncesRoutes);
+
 app.use("/admin", adminRoutes);
 app.use("/api", userRoutes);
 
