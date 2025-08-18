@@ -12,6 +12,41 @@ const Commissions = require("./Commissions");
 const TeamLigue = require("./TeamLigue");
 const ArticlesCommissions = require("./ArticlesCommissions");
 const Annonces = require("./Annonces");
+const usersTechniques = require("./UsersTechniques");
+const Techniques = require("./Techniques");
+const Event = require("./Event");
+const UsersEvents = require("./UsersEvents");
+
+// Association entre Users et Events
+Users.belongsToMany(Event, {
+  through: UsersEvents,
+  foreignKey: "user_id",
+  otherKey: "event_id",
+  as: "Events",
+});
+
+Event.belongsToMany(Users, {
+  through: UsersEvents,
+  foreignKey: "event_id",
+  otherKey: "user_id",
+  as: "Users",
+});
+
+// Association entre User et Techniques
+Users.belongsToMany(Techniques, {
+  through: usersTechniques,
+  foreignKey: "user_id",
+  otherKey: "technique_id",
+  as: "Techniques",
+});
+
+Techniques.belongsToMany(Users, {
+  through: usersTechniques,
+  foreignKey: "technique_id",
+  otherKey: "user_id",
+  as: "Users",
+});
+
 
 // Association entre Annonces et Users
 Annonces.belongsTo(Users, {

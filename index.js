@@ -33,6 +33,10 @@ const commissionRoutes = require("./routes/commissionRoutes");
 const articlesCommissionsRoutes = require("./routes/articlesCommissionsRoutes");
 const teamLigueRoutes = require("./routes/teamLigueRoutes");
 const annoncesRoutes = require("./routes/annoncesRoutes");
+const techniqueRoutes = require("./routes/techniqueRoutes");
+const usersTechniquesRoutes = require("./routes/usersTechniquesRoutes");
+const eventRoutes = require("./routes/eventRoutes");
+const usersEventsRoutes = require("./routes/usersEventsRoutes");
 
 // Utilisez vos routes
 app.use(contactformRoutes);
@@ -50,6 +54,10 @@ app.use(commissionRoutes);
 app.use(articlesCommissionsRoutes);
 app.use(teamLigueRoutes);
 app.use(annoncesRoutes);
+app.use(techniqueRoutes);
+app.use(usersTechniquesRoutes);
+app.use(eventRoutes);
+app.use(usersEventsRoutes);
 
 app.use("/admin", adminRoutes);
 app.use("/api", userRoutes);
