@@ -4,6 +4,7 @@ const errorController = require("./controllers/errorController");
 const userController = require("./controllers/userController");
 const adminRoutes = require("./routes/adminRoutes");
 const fs = require("fs");
+const path = require("path");
 
 require("./models/relations");
 
@@ -16,6 +17,11 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, process.env.UPLOADS_ROOT || "uploads"))
+);
 
 // Importez vos routes
 const contactformRoutes = require("./routes/contactformRoutes");
@@ -37,6 +43,8 @@ const techniqueRoutes = require("./routes/techniqueRoutes");
 const usersTechniquesRoutes = require("./routes/usersTechniquesRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const usersEventsRoutes = require("./routes/usersEventsRoutes");
+const validationBadgeRoutes = require("./routes/validationBadgeRoutes");
+const licenciesRoutes = require("./routes/licenciesRoutes");
 
 // Utilisez vos routes
 app.use(contactformRoutes);
@@ -58,6 +66,8 @@ app.use(techniqueRoutes);
 app.use(usersTechniquesRoutes);
 app.use(eventRoutes);
 app.use(usersEventsRoutes);
+app.use(validationBadgeRoutes);
+app.use(licenciesRoutes);
 
 app.use("/admin", adminRoutes);
 app.use("/api", userRoutes);
@@ -75,6 +85,6 @@ app.use(errorController.middleware);
 
 // Synchronisation de la base de données et démarrage du serveur
 const PORT = process.env.PORT || 9995;
-app.listen(9995, "0.0.0.0", () => {
-  console.log(`Serveur en écoute sur localhost:9995`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Serveur en écoute sur localhost:${PORT}`);
 });

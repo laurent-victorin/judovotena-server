@@ -16,6 +16,50 @@ const usersTechniques = require("./UsersTechniques");
 const Techniques = require("./Techniques");
 const Event = require("./Event");
 const UsersEvents = require("./UsersEvents");
+const ValidationBadge = require("./ValidationBadge");
+const UserClub = require("./UserClub");
+
+// Many-to-many
+Users.belongsToMany(Club, {
+  through: UserClub,
+  foreignKey: "user_id",
+  otherKey: "club_id",
+  as: "Clubs",
+});
+
+Club.belongsToMany(Users, {
+  through: UserClub,
+  foreignKey: "club_id",
+  otherKey: "user_id",
+  as: "Members",
+});
+
+// Liens pivot -> côté “parent” (nécessaire pour include direct sur UserClub)
+UserClub.belongsTo(Users, { foreignKey: "user_id", as: "User" });
+UserClub.belongsTo(Club,  { foreignKey: "club_id", as: "Club" });
+
+Users.hasMany(UserClub, { foreignKey: "user_id", as: "UserClubs" });
+Club.hasMany(UserClub,  { foreignKey: "club_id", as: "ClubLinks" });
+
+// Un utilisateur (enseignant) peut avoir plusieurs badges
+Users.hasMany(ValidationBadge, {
+  foreignKey: "user_id",
+  as: "ValidationBadges",
+});
+ValidationBadge.belongsTo(Users, {
+  foreignKey: "user_id",
+  as: "User",
+});
+
+// Un club peut recevoir plusieurs badges (d’enseignants différents)
+Club.hasMany(ValidationBadge, {
+  foreignKey: "club_id",
+  as: "ValidationBadges",
+});
+ValidationBadge.belongsTo(Club, {
+  foreignKey: "club_id",
+  as: "Club",
+});
 
 // Association entre Users et Events
 Users.belongsToMany(Event, {
@@ -46,7 +90,6 @@ Techniques.belongsToMany(Users, {
   otherKey: "user_id",
   as: "Users",
 });
-
 
 // Association entre Annonces et Users
 Annonces.belongsTo(Users, {

@@ -24,7 +24,7 @@ const Club = sequelize.define(
 
     logo_url: {
       type: DataTypes.STRING, // URL de l'image du club
-      allowNull: false,
+      allowNull: true,
     },
     departement_club: {
       type: DataTypes.STRING, // Département du club
