@@ -5,6 +5,8 @@ const fs = require("fs");
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const sharp = require("sharp");           // utile si besoin d'autres traitements
+const slugify = require("slugify");       // pour slugs dossiers users
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -81,7 +83,7 @@ const localStorage = multer.diskStorage({
 const localUpload = multer({ storage: localStorage });
 
 /* =========================
-   Mémoire (inchangé)
+   Mémoire (générique)
    ========================= */
 const memoryStorage = multer.memoryStorage();
 const memoryUpload = multer({ storage: memoryStorage });
@@ -115,4 +117,88 @@ const uploadValidationBadge = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo
 }).single("badge"); // name du champ fichier côté front: "badge"
 
-module.exports = { upload, localUpload, memoryUpload, uploadValidationBadge };
+/* =========================
+   🔵 Users (avatars) — dossiers & chemins
+   ========================= */
+
+/**
+ * Dossier par utilisateur :
+ * /uploads/photos_users/<id>_<prenom-nom-ou-identifiant>/
+ * → retourne { folderSlug, abs, publicBase }
+ */
+async function getUserPhotoFolderParts(userId) {
+  const Users = require("../models/Users"); // lazy require
+  let folderSlug = String(userId);
+  try {
+    const u = await Users.findByPk(userId);
+    if (u) {
+      const display =
+        `${u.prenom || ""} ${u.nom || ""}`.trim() ||
+        u.username ||
+        u.pseudo ||
+        u.login ||
+        u.email ||
+        "";
+      if (display) {
+        folderSlug += "_" + slugify(display, { lower: true, strict: true });
+      }
+    }
+  } catch (_) {}
+  const abs = path.join(UPLOADS_ROOT, "photos_users", folderSlug);
+  const publicBase = `/uploads/photos_users/${folderSlug}`;
+  return { folderSlug, abs, publicBase };
+}
+
+async function ensureUserPhotoFolderByUserId(userId) {
+  const { abs } = await getUserPhotoFolderParts(String(userId));
+  ensureDir(abs);
+  return abs;
+}
+
+/**
+ * Middleware à placer AVANT l’upload mémoire :
+ * - lit user_id dans params/body
+ * - prépare req.uploadPath (absolu) + req.publicBase (URL publique)
+ */
+async function setUserPhotoUploadPathByUserId(req, res, next) {
+  try {
+    const userId = req.params.id || req.body?.user_id || req.body?.id;
+    if (!userId) return next(new Error("ID de l’utilisateur manquant."));
+    const { abs, publicBase } = await getUserPhotoFolderParts(String(userId));
+    ensureDir(abs);
+    req.uploadPath = abs;        // chemin absolu d’écriture
+    req.publicBase = publicBase; // base publique pour construire l’URL
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/* =========================
+   🔧 Utilitaire chemin public -> absolu (pour crop/delete)
+   ========================= */
+function publicToAbsolute(publicPath) {
+  if (!publicPath || !publicPath.startsWith("/uploads/")) return null;
+  const relative = publicPath.replace(/^\/uploads\//, "");
+  return path.join(UPLOADS_ROOT, relative);
+}
+
+/* =========================
+   Exports
+   ========================= */
+module.exports = {
+  // Cloudinary & uploads
+  upload,
+  localUpload,
+  memoryUpload,
+  uploadValidationBadge,
+
+  // Users (avatars)
+  setUserPhotoUploadPathByUserId,
+  ensureUserPhotoFolderByUserId,
+  getUserPhotoFolderParts,
+
+  // Tools
+  publicToAbsolute,
+  UPLOADS_ROOT,
+};

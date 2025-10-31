@@ -176,15 +176,34 @@ const ClubController = {
         user_id, // peut arriver par erreur depuis un client
       } = req.body;
 
+      // ✅ Vérification minimale : ces 3 champs sont requis
+      if (
+        !nom_club ||
+        String(nom_club).trim() === "" ||
+        !departement_club ||
+        String(departement_club).trim() === "" ||
+        !numero_club ||
+        String(numero_club).trim() === ""
+      ) {
+        return res.status(400).json({
+          message:
+            "Champs requis manquants : nom_club, departement_club, numero_club.",
+        });
+      }
+
+      // Remplace les string vides par null pour les champs optionnels
+      const nil = (v) =>
+        typeof v === "string" ? (v.trim() === "" ? null : v.trim()) : v;
+
       const payload = {
-        nom_club,
-        departement_club,
-        adresse_club,
-        tel_club,
-        email_club,
-        logo_url,
-        numero_club,
-        coordonnees_gps,
+        nom_club: String(nom_club).trim(),
+        departement_club: String(departement_club).trim(),
+        adresse_club: nil(adresse_club),
+        tel_club: nil(tel_club),
+        email_club: nil(email_club),
+        logo_url: nil(logo_url),
+        numero_club: String(numero_club).trim(),
+        coordonnees_gps: nil(coordonnees_gps),
         // On force à null si non numérique
         user_id: Number.isInteger(user_id) ? user_id : null,
       };

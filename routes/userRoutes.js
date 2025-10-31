@@ -3,6 +3,7 @@ const express = require("express");
 const Users = require("../models/Users");
 const router = express.Router();
 const userController = require("../controllers/userController");
+const userPhotoController = require("../controllers/userPhotoController"); // ⬅️ remis tel quel
 const passwordController = require("../controllers/passwordController");
 const cw = require("../controllers/controllerWrapper");
 const bcrypt = require("bcrypt");
@@ -12,7 +13,11 @@ const nodemailer = require("nodemailer");
 const ResetPwd = require("../models/ResetPwd");
 require("dotenv").config(); // Pour utiliser les variables d'environnement
 const { Op } = require("sequelize");
-const { upload } = require("../services/multer-config");
+const {
+  upload, // Cloudinary
+  setUserPhotoUploadPathByUserId, // chemin local avatars
+  memoryUpload, // mémoire générique (comme ancien code)
+} = require("../services/multer-config");
 
 //// userController.js
 /// GET
@@ -135,7 +140,50 @@ router.get("/api/users/send-contact-form", async (req, res) => {
   });
 });
 
-// Route pour mettre à jour l'image de profil d'un utilisateur
+/* ===========================================================
+   🖼️ AVATARS — mêmes endpoints que ton ancien code
+   =========================================================== */
+
+/**
+ * Upload avatar local (sharp 400x400 cover)
+ * - multipart/form-data, champ "file"
+ * - optionnel: body|query.format = webp|jpg|png (défaut: webp)
+ * - renvoie: { ok:true, photoURL:"/uploads/photos_users/<...>.ext" }
+ */
+router.post(
+  "/api/users/:id/photo",
+  setUserPhotoUploadPathByUserId,
+  memoryUpload.single("file"),
+  cw(userPhotoController.uploadUserPhoto)
+);
+
+/**
+ * Définir directement une URL existante (Cloudinary ou locale)
+ * body: { photoURL: "https://..." ou "/uploads/..." }
+ */
+router.put(
+  "/api/users/:id/photo-url",
+  cw(userPhotoController.setUserPhotoUrl)
+);
+
+/**
+ * Recadrer l’avatar (coords x/y/width/height), sortie 400x400
+ * body: { x, y, width, height, format?, src? }
+ */
+router.post(
+  "/api/users/:id/crop",
+  cw(userPhotoController.cropUserPhoto)
+);
+
+/**
+ * Supprimer l’avatar (vide le champ et, si local, supprime le fichier)
+ */
+router.delete(
+  "/api/users/:id/photo",
+  cw(userPhotoController.deleteUserPhoto)
+);
+
+// Route Cloudinary (legacy / rétro-compat)
 router.patch(
   "/api/users/:id/photo",
   upload("/JUDOCOACHPRO/user").single("image"),
@@ -149,7 +197,7 @@ router.post("/api/users/addUser", cw(userController.addUser));
 router.post("/api/users/addUserByAdmin", cw(userController.addUserByAdmin));
 
 /// PATCH
-// Route pour mettre à jour la photo de profile de l'utilisateur
+// Route pour mettre à jour la photo de profile de l'utilisateur (legacy direct)
 router.patch("/api/users/:userId/updateProfileImage", async (req, res) => {
   const userId = req.params.userId;
 
@@ -290,44 +338,9 @@ router.post("/password/reset-password/:token", async (req, res) => {
 router.get("/api/getUsers", cw(userController.getAllUsers));
 router.get("/api/getUser/:id", cw(userController.getUserById));
 
-router.post("/api/login", async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const user = await Users.findOne({ where: { email } });
-    if (user && (await bcrypt.compare(password, user.password))) {
-      // Génération du token JWT
-      const token = jwt.sign(
-        { userId: user.id, email: user.email },
-        process.env.JWT_SECRET, // Utilisez une clé secrète stockée de manière sécurisée
-        { expiresIn: "24h" } // Expiration du token
-      );
-
-      // Inclure les informations utilisateur dans la réponse
-      res.json({
-        message: "Connexion réussie",
-        token,
-        userInfo: {
-          nom: user.nom,
-          prenom: user.prenom,
-          photoURL:
-            user.photoURL ||
-            "https://res.cloudinary.com/dy5kblr32/image/upload/v1715177107/images/utilisateurs/user_avatar_ecd77h.jpg", // Fournissez une URL par défaut si le champ est optionnel
-          role_id: user.role_id || 3, // Assurez-vous que ce champ existe dans votre modèle
-          userId: user.id,
-        },
-      });
-    } else {
-      res.status(401).send("Email ou mot de passe incorrect");
-    }
-  } catch (error) {
-    console.error("Erreur lors de la connexion :", error);
-    res.status(500).send("Erreur lors de la connexion");
-  }
-});
-
 // Route pour valider un token et récupérer les informations de l'utilisateur
 router.get("/api/validateToken", async (req, res) => {
-  const token = req.headers.authorization.split(" ")[1]; // Extrait le token du header d'autorisation
+  const token = req.headers.authorization?.split(" ")[1]; // sécurisé
   if (!token) {
     return res.status(401).send("Aucun token fourni.");
   }

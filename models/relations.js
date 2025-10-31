@@ -18,6 +18,30 @@ const Event = require("./Event");
 const UsersEvents = require("./UsersEvents");
 const ValidationBadge = require("./ValidationBadge");
 const UserClub = require("./UserClub");
+const LicencieEvent = require("./LicencieEvent");
+const Licencies = require("./Licencies");
+
+// N:N
+Licencies.belongsToMany(Event, {
+  through: LicencieEvent,
+  foreignKey: "licencie_id",
+  otherKey: "event_id",
+  as: "Events",
+});
+
+Event.belongsToMany(Licencies, {
+  through: LicencieEvent,
+  foreignKey: "event_id",
+  otherKey: "licencie_id",
+  as: "Participants",
+});
+
+// Pour les include directs sur la table pivot
+LicencieEvent.belongsTo(Licencies, { foreignKey: "licencie_id", as: "Licencie" });
+LicencieEvent.belongsTo(Event, { foreignKey: "event_id", as: "Event" });
+
+Licencies.hasMany(LicencieEvent, { foreignKey: "licencie_id", as: "LicencieEvents" });
+Event.hasMany(LicencieEvent, { foreignKey: "event_id", as: "EventLinks" });
 
 // Many-to-many
 Users.belongsToMany(Club, {

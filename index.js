@@ -84,7 +84,7 @@ app.use(authenticateToken);
 app.use(errorController.middleware);
 
 // Synchronisation de la base de données et démarrage du serveur
-const PORT = process.env.PORT || 9995;
+const PORT = process.env.PORT || 9996;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Serveur en écoute sur localhost:${PORT}`);
 });
