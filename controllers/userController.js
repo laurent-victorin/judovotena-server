@@ -5,9 +5,21 @@ const errorController = require("./errorController");
 const bcrypt = require("bcrypt");
 const saltRounds = 10; // Définissez le nombre de tours de salt pour bcrypt
 const { Sequelize, Op } = require("sequelize");
+const { fn, col } = require("sequelize");
 
 // Ajoutez votre clé secrète JWT à vos variables d'environnement ou configurez-la ici
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
+
+const ROLE_MAP = {
+  1: "Administrateur",
+  2: "Utilisateur",
+  3: "Dirigeant Club",
+  4: "Arbitre",
+  5: "Responsable Arbitrage",
+  6: "Membre de la Ligue NA",
+  7: "Responsables Comités Départementaux",
+  8: "Enseignant-Coach",
+};
 
 const userController = {
   /// GET
@@ -18,14 +30,29 @@ const userController = {
       const users = await Users.findAll({
         attributes: ["id", "nom", "prenom", "email", "role_id", "createdOn"],
         include: [
+          // ⬇️ Many-to-many : tous les clubs liés à l'utilisateur
+          {
+            model: Club,
+            as: "Clubs",
+            attributes: ["id", "nom_club", "departement_club"],
+            through: { attributes: [] }, // masque les colonnes de la table de jointure
+            required: false,
+          },
+          // ⬇️ Legacy (si tu avais un belongsTo "Club" historique)
           {
             model: Club,
             as: "Club",
             attributes: ["id", "nom_club", "departement_club"],
+            required: false,
           },
         ],
-        order: [["nom", "ASC"]],
+        order: [
+          ["nom", "ASC"],
+          [{ model: Club, as: "Clubs" }, "nom_club", "ASC"],
+        ],
+        distinct: true, // évite les doublons sur les lignes avec include
       });
+
       res.json(users);
     } catch (error) {
       errorController._500(error, req, res);
@@ -311,7 +338,7 @@ const userController = {
 
     try {
       // Vérifier que le rôle est valide
-      const allowedRoles = [2, 3, 4];
+      const allowedRoles = [2, 3, 4, 8];
       const finalRoleId = allowedRoles.includes(role_id) ? role_id : 2;
 
       const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -322,36 +349,35 @@ const userController = {
         email,
         password: hashedPassword,
         role_id: finalRoleId,
-        photoURL:
-          "https://res.cloudinary.com/dy5kblr32/image/upload/v1715177107/images/utilisateurs/user_avatar_ecd77h.jpg",
+        photoURL: "https://www.liguejudona.com/img/user_avatar.jpg",
       });
 
       // Message à l’admin
-      const adminUser = await Users.findOne({ where: { role_id: 1 } });
-      if (adminUser) {
-        await Message.create({
-          sender_id: newUser.id,
-          recipient_id: adminUser.id,
-          subject: "Nouvel utilisateur inscrit",
-          content: `Un nouvel utilisateur a été créé : ${nom} ${prenom} (${email}).`,
-          read_message: false,
-          is_copy: false,
-        });
-      }
+      // const adminUser = await Users.findOne({ where: { role_id: 1 } });
+      // if (adminUser) {
+      //   await Message.create({
+      //     sender_id: newUser.id,
+      //     recipient_id: adminUser.id,
+      //     subject: "Nouvel utilisateur inscrit",
+      //     content: `Un nouvel utilisateur a été créé : ${nom} ${prenom} (${email}).`,
+      //     read_message: false,
+      //     is_copy: false,
+      //   });
+      // }
 
       // Message de bienvenue
-      await Message.create({
-        sender_id: adminUser ? adminUser.id : null,
-        recipient_id: newUser.id,
-        subject: "Bienvenue sur notre plateforme",
-        content: `
-      <p>Bonjour ${prenom} ${nom},</p>
-      <p>Bienvenue sur notre plateforme. Nous sommes ravis de vous compter parmi nous !</p>
-      <p>Cordialement,<br />L'équipe Support.</p>
-      `,
-        read_message: false,
-        is_copy: false,
-      });
+      // await Message.create({
+      //   sender_id: adminUser ? adminUser.id : null,
+      //   recipient_id: newUser.id,
+      //   subject: "Bienvenue sur notre plateforme",
+      //   content: `
+      // <p>Bonjour ${prenom} ${nom},</p>
+      // <p>Bienvenue sur notre plateforme. Nous sommes ravis de vous compter parmi nous !</p>
+      // <p>Cordialement,<br />L'équipe Support.</p>
+      // `,
+      //   read_message: false,
+      //   is_copy: false,
+      // });
 
       return res.status(201).json({
         message: "Utilisateur créé avec succès.",
@@ -419,25 +445,28 @@ const userController = {
     }
   },
 
-  countUsers: async (req, res, next) => {
+  countUsers: async (req, res) => {
     try {
-      const userCount = await Users.count();
-      const adminCount = await Users.count({ where: { role_id: 1 } });
-      const modeDemo = await Users.count({ where: { role_id: 2 } });
-      const presence = await Users.count({ where: { role_id: 3 } });
-      const presencePro = await Users.count({ where: { role_id: 4 } });
-      const presenceUltim = await Users.count({ where: { role_id: 5 } });
-      const enseignants = await Users.count({ where: { role_id: 6 } });
+      const total = await Users.count();
 
-      res.json({
-        total: userCount,
-        admin: adminCount,
-        modeDemo: modeDemo,
-        presence: presence,
-        presencePro: presencePro,
-        presenceUltim: presenceUltim,
-        enseignants: enseignants,
+      // group by role_id
+      const grouped = await Users.findAll({
+        attributes: ["role_id", [fn("COUNT", col("id")), "count"]],
+        group: ["role_id"],
+        raw: true,
       });
+
+      // normalise -> ensure every role 1..8 is present
+      const byId = Object.fromEntries(
+        grouped.map((r) => [Number(r.role_id), Number(r.count)])
+      );
+      const roles = Object.entries(ROLE_MAP).map(([id, label]) => ({
+        role_id: Number(id),
+        role_label: label,
+        count: byId[Number(id)] || 0,
+      }));
+
+      res.json({ total, roles });
     } catch (error) {
       errorController._500(error, req, res);
     }

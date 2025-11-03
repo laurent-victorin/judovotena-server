@@ -6,6 +6,8 @@ const UserVoteToken = require("../models/UserVoteToken");
 const { Op } = require("sequelize");
 const { Sequelize } = require("sequelize");
 const errorController = require("./errorController");
+const { isRoleAllowed } = require("../utils/isRoleAllowed");
+const Users = require("../models/Users");
 
 const voteController = {
   /// ============================
@@ -15,23 +17,39 @@ const voteController = {
   /// GET - Tous les votes
   getAllVotes: async (req, res, next) => {
     try {
+      const roleId = req.user?.role_id;
+
+      // Si tu veux autoriser l'appel sans auth, roleId peut être undefined :
+      // dans ce cas on ne filtre pas (ou on renvoie vide, à toi de choisir).
+      const where = {};
+      if (typeof roleId === "number") {
+        where[Op.or] = [
+          { allowed_roles: null },
+          Sequelize.literal("JSON_LENGTH(allowed_roles) = 0"),
+          Sequelize.literal(
+            `JSON_CONTAINS(allowed_roles, CAST(${roleId} AS JSON), '$')`
+          ),
+        ];
+      }
+
       const votes = await Vote.findAll({
+        where,
         attributes: {
           include: [
             [
               Sequelize.literal(`(
-                SELECT COUNT(*)
-                FROM questions_db AS questions
-                WHERE questions.vote_id = Vote.id
-              )`),
+            SELECT COUNT(*)
+            FROM questions_db AS questions
+            WHERE questions.vote_id = Vote.id
+          )`),
               "questionCount",
             ],
             [
               Sequelize.literal(`(
-              SELECT COUNT(DISTINCT user_id)
-              FROM ballots_db AS ballots
-              WHERE ballots.vote_id = Vote.id
-            )`),
+            SELECT COUNT(DISTINCT user_id)
+            FROM ballots_db AS ballots
+            WHERE ballots.vote_id = Vote.id
+          )`),
               "voterCount",
             ],
           ],
@@ -48,23 +66,21 @@ const voteController = {
   // GET - Un vote par ID + ses questions + leurs réponses (choices)
   getVoteById: async (req, res, next) => {
     try {
+      const roleId = req.user?.role_id;
+
       const vote = await Vote.findByPk(req.params.id, {
         include: [
           {
             model: Question,
             as: "questions",
-            include: [
-              {
-                model: Choice,
-                as: "choices",
-              },
-            ],
+            include: [{ model: Choice, as: "choices" }],
           },
         ],
       });
+      if (!vote) return res.status(404).json({ message: "Vote non trouvé" });
 
-      if (!vote) {
-        return res.status(404).json({ message: "Vote non trouvé" });
+      if (typeof roleId === "number" && !isRoleAllowed(vote, roleId)) {
+        return res.status(403).json({ message: "Accès interdit pour ce rôle" });
       }
 
       res.json(vote);

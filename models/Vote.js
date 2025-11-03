@@ -32,6 +32,7 @@ const Vote = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     }, // 'vote' ou 'sondage'
+    allowed_roles: { type: DataTypes.JSON, allowNull: true },
   },
   {
     tableName: "votes_db",
