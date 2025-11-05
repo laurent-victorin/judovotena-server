@@ -161,27 +161,18 @@ router.post(
  * Définir directement une URL existante (Cloudinary ou locale)
  * body: { photoURL: "https://..." ou "/uploads/..." }
  */
-router.put(
-  "/api/users/:id/photo-url",
-  cw(userPhotoController.setUserPhotoUrl)
-);
+router.put("/api/users/:id/photo-url", cw(userPhotoController.setUserPhotoUrl));
 
 /**
  * Recadrer l’avatar (coords x/y/width/height), sortie 400x400
  * body: { x, y, width, height, format?, src? }
  */
-router.post(
-  "/api/users/:id/crop",
-  cw(userPhotoController.cropUserPhoto)
-);
+router.post("/api/users/:id/crop", cw(userPhotoController.cropUserPhoto));
 
 /**
  * Supprimer l’avatar (vide le champ et, si local, supprime le fichier)
  */
-router.delete(
-  "/api/users/:id/photo",
-  cw(userPhotoController.deleteUserPhoto)
-);
+router.delete("/api/users/:id/photo", cw(userPhotoController.deleteUserPhoto));
 
 // Route Cloudinary (legacy / rétro-compat)
 router.patch(
@@ -272,13 +263,13 @@ router.get("/password/check-token/:token", async (req, res) => {
         valid: false, // Ajout d'un champ "valid" pour la cohérence
         message: "Token invalide ou expiré",
         redirectUrl:
-          "https://www.judo-presence-pro.com/error-page?error=Token invalide ou expiré",
+          "https://www.liguejudona.com/error-page?error=Token invalide ou expiré",
       });
     }
 
     res.json({
       valid: true, // Confirmation que le token est valide
-      redirectUrl: `https://www.judo-presence-pro.com/reset-password/${token}`,
+      redirectUrl: `https://www.liguejudona.com/reset-password/${token}`,
     });
   } catch (error) {
     console.error("Erreur serveur lors de la vérification du token:", error);

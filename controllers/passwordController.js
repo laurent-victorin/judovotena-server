@@ -38,7 +38,7 @@ const passwordController = {
         text:
           `Vous recevez cet email car vous (ou quelqu'un d'autre) avez demandé la réinitialisation du mot de passe de votre compte.\n\n` +
           `Veuillez cliquer sur le lien suivant, ou copiez-le dans votre navigateur pour compléter le processus :\n\n` +
-          `https://www.judo-presence-pro.com/reset-password/${token}\n\n` + // Changez ici par l'URL de votre front-end
+          `https://www.liguejudona.com/reset-password/${token}\n\n` + // Changez ici par l'URL de votre front-end
           `Si vous n'avez pas demandé cela, veuillez ignorer cet email et votre mot de passe restera inchangé.\n`,
       };
 
