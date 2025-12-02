@@ -16,6 +16,12 @@ router.get("/api/vote/:id", cw(voteController.getVoteById));
 // afficher les résultats d'un vote
 router.get("/api/vote/:id/results", cw(voteController.getVoteResults));
 
+// ✅ Résultats détaillés (non anonymes) d'un vote
+router.get(
+  "/api/vote/:id/results-detailed",
+  cw(voteController.getVoteResultsDetailed)
+);
+
 /// POST - Créer un nouveau vote / sondage
 router.post("/api/vote/create", cw(voteController.createVote));
 

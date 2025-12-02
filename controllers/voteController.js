@@ -8,6 +8,7 @@ const { Sequelize } = require("sequelize");
 const errorController = require("./errorController");
 const { isRoleAllowed } = require("../utils/isRoleAllowed");
 const Users = require("../models/Users");
+const sequelize = require("../database");
 
 const voteController = {
   /// ============================
@@ -159,6 +160,101 @@ const voteController = {
       res.json({ vote_id: vote.id, title: vote.title, results });
     } catch (error) {
       console.error("Erreur récupération résultats :", error);
+      errorController._500(error, req, res);
+    }
+  },
+
+  // GET - Résultats détaillés (nominatifs) d'un vote
+  getVoteResultsDetailed: async (req, res) => {
+    try {
+      const voteId = req.params.id;
+
+      // 1) Récupération du vote
+      const vote = await Vote.findByPk(voteId);
+      if (!vote) {
+        return res.status(404).json({ message: "Vote introuvable" });
+      }
+
+      // 2) Respect du paramètre is_anonymous
+      if (vote.is_anonymous) {
+        return res.status(403).json({
+          message:
+            "Ce vote est configuré comme anonyme. Les réponses nominatives ne sont pas disponibles.",
+        });
+      }
+
+      // 3) Requête brute pour lister tous les bulletins + user + question + choix
+      const rows = await sequelize.query(
+        `
+      SELECT
+        b.id AS ballot_id,
+        b.user_id,
+        u.nom AS user_nom,
+        u.prenom AS user_prenom,
+        u.email AS user_email,
+        NULL AS user_club,
+        b.vote_id,
+        b.question_id,
+        q.question_text,
+        q.type AS question_type,
+        b.choice_id,
+        c.choice_text,
+        b.answer_text,
+        b.timestamp
+      FROM ballots_db b
+      JOIN questions_db q ON q.id = b.question_id
+      LEFT JOIN choices_db c ON c.id = b.choice_id
+      LEFT JOIN users_db u ON u.id = b.user_id
+      WHERE b.vote_id = :voteId
+      ORDER BY q.id ASC, u.nom ASC, u.prenom ASC, b.timestamp ASC
+      `,
+        {
+          replacements: { voteId },
+          type: Sequelize.QueryTypes.SELECT,
+        }
+      );
+
+      // 4) Regroupement par question
+      const questionsMap = {};
+
+      for (const row of rows) {
+        if (!questionsMap[row.question_id]) {
+          questionsMap[row.question_id] = {
+            question_id: row.question_id,
+            question_text: row.question_text,
+            type: row.question_type,
+            answers: [],
+          };
+        }
+
+        questionsMap[row.question_id].answers.push({
+          ballot_id: row.ballot_id,
+          user: {
+            id: row.user_id,
+            nom: row.user_nom,
+            prenom: row.user_prenom,
+            email: row.user_email,
+            club: row.user_club, // sera null pour l’instant
+          },
+          choice: row.choice_id
+            ? {
+                id: row.choice_id,
+                text: row.choice_text,
+              }
+            : null,
+          answer_text: row.answer_text, // pour les questions "open"
+          timestamp: row.timestamp,
+        });
+      }
+
+      return res.json({
+        vote_id: vote.id,
+        title: vote.title,
+        is_anonymous: vote.is_anonymous,
+        questions: Object.values(questionsMap),
+      });
+    } catch (error) {
+      console.error("Erreur résultats détaillés vote :", error);
       errorController._500(error, req, res);
     }
   },

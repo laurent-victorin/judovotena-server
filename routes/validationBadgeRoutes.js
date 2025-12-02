@@ -67,6 +67,10 @@ router.get(
   "/api/validationbadges/byClub/:club_id",
   cw(validationBadgeController.getByClub)
 );
+router.get(
+  "/api/validationbadges/users-with-badges",
+  cw(validationBadgeController.listUsersWithBadgesSimple)
+);
 router.post(
   "/api/validationbadges/add",
   uploadValidationBadge,
