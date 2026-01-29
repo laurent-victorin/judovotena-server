@@ -20,7 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   "/uploads",
-  express.static(path.join(__dirname, process.env.UPLOADS_ROOT || "uploads"))
+  express.static(path.join(__dirname, process.env.UPLOADS_ROOT || "uploads")),
 );
 
 // Importez vos routes
@@ -47,7 +47,8 @@ const validationBadgeRoutes = require("./routes/validationBadgeRoutes");
 const licenciesRoutes = require("./routes/licenciesRoutes");
 const resultseventRoutes = require("./routes/resultseventRoutes");
 const eventCastRoutes = require("./routes/eventCastRoutes");
-
+const trainingArticleRoutes = require("./routes/trainingArticleRoutes");
+const eventLiveRoutes = require("./routes/eventLiveRoutes");
 
 // Utilisez vos routes
 app.use(contactformRoutes);
@@ -73,6 +74,8 @@ app.use(validationBadgeRoutes);
 app.use(licenciesRoutes);
 app.use(resultseventRoutes);
 app.use(eventCastRoutes);
+app.use(trainingArticleRoutes);
+app.use(eventLiveRoutes);
 
 app.use("/admin", adminRoutes);
 app.use("/api", userRoutes);

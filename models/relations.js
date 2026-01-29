@@ -24,6 +24,7 @@ const EventMat = require("./EventMat");
 const EventMatSlot = require("./EventMatSlot");
 const EventBroadcastMessage = require("./EventBroadcastMessage");
 const EventCastState = require("./EventCastState");
+const EventMatStream = require("./EventMatStream");
 
 /* ======================================================================
    ✅ RELATIONS CASTING / TAPIS / MESSAGES
@@ -79,6 +80,14 @@ EventBroadcastMessage.hasMany(EventCastState, {
   as: "UsedAsActiveInStates",
 });
 
+// Mat -> Streams
+EventMat.hasOne(EventMatStream, {
+  foreignKey: "event_mat_id",
+  as: "Stream",
+});
+EventMatStream.belongsTo(EventMat, {
+  foreignKey: "event_mat_id",
+});
 
 // N:N
 Licencies.belongsToMany(Event, {
@@ -96,10 +105,16 @@ Event.belongsToMany(Licencies, {
 });
 
 // Pour les include directs sur la table pivot
-LicencieEvent.belongsTo(Licencies, { foreignKey: "licencie_id", as: "Licencie" });
+LicencieEvent.belongsTo(Licencies, {
+  foreignKey: "licencie_id",
+  as: "Licencie",
+});
 LicencieEvent.belongsTo(Event, { foreignKey: "event_id", as: "Event" });
 
-Licencies.hasMany(LicencieEvent, { foreignKey: "licencie_id", as: "LicencieEvents" });
+Licencies.hasMany(LicencieEvent, {
+  foreignKey: "licencie_id",
+  as: "LicencieEvents",
+});
 Event.hasMany(LicencieEvent, { foreignKey: "event_id", as: "EventLinks" });
 
 // Many-to-many
@@ -119,10 +134,10 @@ Club.belongsToMany(Users, {
 
 // Liens pivot -> côté “parent” (nécessaire pour include direct sur UserClub)
 UserClub.belongsTo(Users, { foreignKey: "user_id", as: "User" });
-UserClub.belongsTo(Club,  { foreignKey: "club_id", as: "Club" });
+UserClub.belongsTo(Club, { foreignKey: "club_id", as: "Club" });
 
 Users.hasMany(UserClub, { foreignKey: "user_id", as: "UserClubs" });
-Club.hasMany(UserClub,  { foreignKey: "club_id", as: "ClubLinks" });
+Club.hasMany(UserClub, { foreignKey: "club_id", as: "ClubLinks" });
 
 // Un utilisateur (enseignant) peut avoir plusieurs badges
 Users.hasMany(ValidationBadge, {
