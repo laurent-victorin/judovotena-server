@@ -46,6 +46,8 @@ const usersEventsRoutes = require("./routes/usersEventsRoutes");
 const validationBadgeRoutes = require("./routes/validationBadgeRoutes");
 const licenciesRoutes = require("./routes/licenciesRoutes");
 const resultseventRoutes = require("./routes/resultseventRoutes");
+const eventCastRoutes = require("./routes/eventCastRoutes");
+
 
 // Utilisez vos routes
 app.use(contactformRoutes);
@@ -70,6 +72,7 @@ app.use(usersEventsRoutes);
 app.use(validationBadgeRoutes);
 app.use(licenciesRoutes);
 app.use(resultseventRoutes);
+app.use(eventCastRoutes);
 
 app.use("/admin", adminRoutes);
 app.use("/api", userRoutes);

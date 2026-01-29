@@ -20,6 +20,65 @@ const ValidationBadge = require("./ValidationBadge");
 const UserClub = require("./UserClub");
 const LicencieEvent = require("./LicencieEvent");
 const Licencies = require("./Licencies");
+const EventMat = require("./EventMat");
+const EventMatSlot = require("./EventMatSlot");
+const EventBroadcastMessage = require("./EventBroadcastMessage");
+const EventCastState = require("./EventCastState");
+
+/* ======================================================================
+   ✅ RELATIONS CASTING / TAPIS / MESSAGES
+   ====================================================================== */
+
+// Event -> Mats
+Event.hasMany(EventMat, {
+  foreignKey: "event_id",
+  as: "Mats",
+});
+EventMat.belongsTo(Event, {
+  foreignKey: "event_id",
+  as: "Event",
+});
+
+// Mat -> Slots
+EventMat.hasMany(EventMatSlot, {
+  foreignKey: "event_mat_id",
+  as: "Slots",
+});
+EventMatSlot.belongsTo(EventMat, {
+  foreignKey: "event_mat_id",
+  as: "Mat",
+});
+
+// Event -> Messages
+Event.hasMany(EventBroadcastMessage, {
+  foreignKey: "event_id",
+  as: "BroadcastMessages",
+});
+EventBroadcastMessage.belongsTo(Event, {
+  foreignKey: "event_id",
+  as: "Event",
+});
+
+// Event -> CastState (1:1)
+Event.hasOne(EventCastState, {
+  foreignKey: "event_id",
+  as: "CastState",
+});
+EventCastState.belongsTo(Event, {
+  foreignKey: "event_id",
+  as: "Event",
+});
+
+// (Optionnel mais utile) CastState -> Message actif
+EventCastState.belongsTo(EventBroadcastMessage, {
+  foreignKey: "active_message_id",
+  as: "ActiveMessage",
+});
+EventBroadcastMessage.hasMany(EventCastState, {
+  foreignKey: "active_message_id",
+  as: "UsedAsActiveInStates",
+});
+
 
 // N:N
 Licencies.belongsToMany(Event, {
