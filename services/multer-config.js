@@ -183,6 +183,48 @@ function publicToAbsolute(publicPath) {
   return path.join(UPLOADS_ROOT, relative);
 }
 
+
+// =========================
+// Local disk storage — Expense Attachments (images + PDF)
+// =========================
+const EXPENSE_ATTACHMENTS_DIR = path.join(UPLOADS_ROOT, "expense_attachments");
+
+const storageExpenseAttachments = multer.diskStorage({
+  destination: function (req, file, cb) {
+    ensureDir(EXPENSE_ATTACHMENTS_DIR);
+    cb(null, EXPENSE_ATTACHMENTS_DIR);
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const base = path
+      .basename(file.originalname, ext)
+      .replace(/\s+/g, "_")
+      .replace(/[^a-zA-Z0-9_\-\.]/g, "");
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${base}-${uniqueSuffix}${ext}`);
+  },
+});
+
+const expenseAttachmentFilter = (req, file, cb) => {
+  const ok = [
+    "application/pdf",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+  ].includes(file.mimetype);
+
+  if (!ok) return cb(new Error("Type de fichier non autorisé (PDF / images uniquement)."));
+  cb(null, true);
+};
+
+const uploadExpenseAttachment = multer({
+  storage: storageExpenseAttachments,
+  fileFilter: expenseAttachmentFilter,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15 Mo
+});
+
+
 /* =========================
    Exports
    ========================= */
@@ -192,6 +234,7 @@ module.exports = {
   localUpload,
   memoryUpload,
   uploadValidationBadge,
+  uploadExpenseAttachment,
 
   // Users (avatars)
   setUserPhotoUploadPathByUserId,

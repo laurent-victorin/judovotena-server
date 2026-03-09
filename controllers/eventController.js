@@ -21,6 +21,21 @@ const eventController = {
     }
   },
 
+  // Controller pour afficher les détails d'un événement
+  getEventById: async (req, res, next) => {
+    const { id } = req.params;
+    try {
+      const event = await Event.findByPk(id);
+      if (event) {
+        res.json(event);
+      } else {
+        res.status(404).send({ message: "Event not found" });
+      }
+    } catch (error) {
+      errorController._500(error, req, res);
+    }
+  },
+
   /// POST
   // Controller pour créer un événement
   createEvent: async (req, res, next) => {

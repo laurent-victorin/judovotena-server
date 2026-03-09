@@ -9,6 +9,9 @@ const leCtrl = require("../controllers/licencieEventController");
 // Route pour afficher tous les événements
 router.get("/api/events/allevents", cw(eventController.getAllEvents));
 
+// Route pour afficher les détails d'un événement
+router.get("/api/events/:id", cw(eventController.getEventById));
+
 /// POST
 // Route pour créer un événement
 router.post("/api/events/createevents", cw(eventController.createEvent));

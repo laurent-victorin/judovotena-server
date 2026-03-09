@@ -25,6 +25,107 @@ const EventMatSlot = require("./EventMatSlot");
 const EventBroadcastMessage = require("./EventBroadcastMessage");
 const EventCastState = require("./EventCastState");
 const EventMatStream = require("./EventMatStream");
+const UserExpenseProfile = require("./UserExpenseProfile");
+const EventBudgetCode = require("./EventBudgetCode");
+const ExpenseClaim = require("./ExpenseClaim");
+const ExpenseClaimItem = require("./ExpenseClaimItem");
+const ExpenseClaimAttachment = require("./ExpenseClaimAttachment");
+
+/* ======================================================================
+   ✅ RELATIONS FICHES DE FRAIS
+   ====================================================================== */
+
+// Users <-> UserExpenseProfile (1:1)
+Users.hasOne(UserExpenseProfile, {
+  foreignKey: "user_id",
+  as: "ExpenseProfile",
+});
+UserExpenseProfile.belongsTo(Users, {
+  foreignKey: "user_id",
+  as: "ProfileOwner",
+});
+
+// Users <-> ExpenseClaim (1:N) (créateur de la fiche)
+Users.hasMany(ExpenseClaim, {
+  foreignKey: "user_id",
+  as: "ExpenseClaims",
+});
+ExpenseClaim.belongsTo(Users, {
+  foreignKey: "user_id",
+  as: "Claimant",
+});
+
+// Event <-> ExpenseClaim (1:N)
+Event.hasMany(ExpenseClaim, {
+  foreignKey: "event_id",
+  as: "EventExpenseClaims",
+});
+ExpenseClaim.belongsTo(Event, {
+  foreignKey: "event_id",
+  as: "ClaimEvent",
+});
+
+// EventBudgetCode <-> ExpenseClaim (1:N)
+// (table globale codes budgétaires => pas de lien direct avec Event)
+EventBudgetCode.hasMany(ExpenseClaim, {
+  foreignKey: "code_budgetaire_id",
+  as: "BudgetCodeExpenseClaims",
+});
+ExpenseClaim.belongsTo(EventBudgetCode, {
+  foreignKey: "code_budgetaire_id",
+  as: "BudgetCode",
+});
+
+// Users (validateur) <-> ExpenseClaim (1:N) via validated_by_user_id
+Users.hasMany(ExpenseClaim, {
+  foreignKey: "validated_by_user_id",
+  as: "ValidatedExpenseClaims",
+});
+ExpenseClaim.belongsTo(Users, {
+  foreignKey: "validated_by_user_id",
+  as: "ClaimValidator",
+});
+
+// ExpenseClaim <-> ExpenseClaimItem (1:N)
+ExpenseClaim.hasMany(ExpenseClaimItem, {
+  foreignKey: "expense_claim_id",
+  as: "ClaimItems",
+});
+ExpenseClaimItem.belongsTo(ExpenseClaim, {
+  foreignKey: "expense_claim_id",
+  as: "ParentClaim",
+});
+
+// ExpenseClaim <-> ExpenseClaimAttachment (1:N)
+ExpenseClaim.hasMany(ExpenseClaimAttachment, {
+  foreignKey: "expense_claim_id",
+  as: "ClaimAttachments",
+});
+ExpenseClaimAttachment.belongsTo(ExpenseClaim, {
+  foreignKey: "expense_claim_id",
+  as: "AttachmentClaim",
+});
+
+// ExpenseClaimItem <-> ExpenseClaimAttachment (1:N) (optionnel)
+ExpenseClaimItem.hasMany(ExpenseClaimAttachment, {
+  foreignKey: "expense_claim_item_id",
+  as: "ItemAttachments",
+});
+ExpenseClaimAttachment.belongsTo(ExpenseClaimItem, {
+  foreignKey: "expense_claim_item_id",
+  as: "AttachmentItem",
+});
+
+// Users (uploader) <-> ExpenseClaimAttachment (1:N)
+Users.hasMany(ExpenseClaimAttachment, {
+  foreignKey: "uploaded_by_user_id",
+  as: "UploadedExpenseAttachments",
+});
+ExpenseClaimAttachment.belongsTo(Users, {
+  foreignKey: "uploaded_by_user_id",
+  as: "AttachmentUploader",
+});
+
 
 /* ======================================================================
    ✅ RELATIONS CASTING / TAPIS / MESSAGES

@@ -49,6 +49,7 @@ const resultseventRoutes = require("./routes/resultseventRoutes");
 const eventCastRoutes = require("./routes/eventCastRoutes");
 const trainingArticleRoutes = require("./routes/trainingArticleRoutes");
 const eventLiveRoutes = require("./routes/eventLiveRoutes");
+const expenseRoutes = require("./routes/expenseRoutes");
 
 // Utilisez vos routes
 app.use(contactformRoutes);
@@ -76,6 +77,7 @@ app.use(resultseventRoutes);
 app.use(eventCastRoutes);
 app.use(trainingArticleRoutes);
 app.use(eventLiveRoutes);
+app.use(expenseRoutes);
 
 app.use("/admin", adminRoutes);
 app.use("/api", userRoutes);
