@@ -173,6 +173,7 @@ const ClubController = {
         logo_url,
         numero_club,
         coordonnees_gps,
+        site_club,
         user_id, // peut arriver par erreur depuis un client
       } = req.body;
 
@@ -204,6 +205,7 @@ const ClubController = {
         logo_url: nil(logo_url),
         numero_club: String(numero_club).trim(),
         coordonnees_gps: nil(coordonnees_gps),
+        site_club: nil(site_club),
         // On force à null si non numérique
         user_id: Number.isInteger(user_id) ? user_id : null,
       };

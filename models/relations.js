@@ -31,6 +31,81 @@ const ExpenseClaim = require("./ExpenseClaim");
 const ExpenseClaimItem = require("./ExpenseClaimItem");
 const ExpenseClaimAttachment = require("./ExpenseClaimAttachment");
 
+const Acteurs = require("./Acteurs");
+const UserActeur = require("./UserActeur");
+const Group = require("./Group");
+const ActeurGroup = require("./ActeurGroup");
+const ActeurEvent = require("./ActeurEvent");
+
+// Association entre Users et Acteurs
+Users.belongsToMany(Acteurs, {
+  through: UserActeur,
+  foreignKey: "user_id", // Clé étrangère dans UserActeur pointant vers Users
+  otherKey: "acteur_id", // Clé étrangère dans UserActeur pointant vers Acteurs
+  as: "Acteurs", // Alias pour cette association
+});
+Acteurs.belongsToMany(Users, {
+  through: UserActeur,
+  foreignKey: "acteur_id", // Clé étrangère dans UserActeur pointant vers Acteurs
+  otherKey: "user_id", // Clé étrangère dans UserActeur pointant vers Users
+  as: "Users", // Alias pour cette association
+});
+
+
+// Association entre Acteurs et Group à travers ActeurGroup
+Acteurs.belongsToMany(Group, {
+  through: ActeurGroup,
+  foreignKey: "acteur_id",
+  otherKey: "group_id",
+  as: "Groups",
+});
+
+Group.belongsToMany(Acteurs, {
+  through: ActeurGroup,
+  foreignKey: "group_id",
+  otherKey: "acteur_id",
+  as: "Acteurs",
+});
+
+// Association entre Acteurs et Event
+Acteurs.belongsToMany(Event, {
+  through: ActeurEvent,
+  foreignKey: "acteur_id",
+  otherKey: "event_id",
+  as: "Events",
+});
+
+Event.belongsToMany(Acteurs, {
+  through: ActeurEvent,
+  foreignKey: "event_id",
+  otherKey: "acteur_id",
+  as: "Acteur",
+});
+
+// Association entre Acteurs et ActeurEvent
+Acteurs.hasMany(ActeurEvent, {
+  foreignKey: "acteur_id",
+  as: "ActeurEvents",
+});
+
+ActeurEvent.belongsTo(Acteurs, {
+  foreignKey: "acteur_id",
+  as: "Acteur",
+});
+
+// Association entre Event et ActeurEvent
+Event.hasMany(ActeurEvent, {
+  foreignKey: "event_id",
+  as: "EventActeurEvents",
+});
+
+ActeurEvent.belongsTo(Event, {
+  foreignKey: "event_id",
+  as: "Event",
+});
+
+
+
 /* ======================================================================
    ✅ RELATIONS FICHES DE FRAIS
    ====================================================================== */

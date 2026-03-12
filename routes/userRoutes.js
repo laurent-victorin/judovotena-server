@@ -22,10 +22,24 @@ const {
 //// userController.js
 /// GET
 
+// Route pour obtenir tous les acteurs d'un utilisateur via UserActeur
+router.get("/api/users/:userId/acteurs", cw(userController.getActeursByUserId));
+
+
+
+// Route pour afficher les utilisateurs par ordre alphabétique (Messaging)
+router.get("/api/users/allusers", cw(userController.getAllUsersAlphabetically));
+
 // Route pour obtenir tous les utilisateurs avec leur club
 router.get(
   "/api/users/allUsersWithClub",
-  cw(userController.getAllUsersWithClub)
+  cw(userController.getAllUsersWithClub),
+);
+
+// Route pour obtenir tous les userID des utilisateurs à partir de acteur_id de la table UserActeur
+router.get(
+  "/api/users/userIdByActeurId/:acteurId",
+  cw(userController.getUserIdByActeurId)
 );
 
 // Route pour obtenir les informations de l'utilisateur connecté
@@ -75,7 +89,7 @@ router.post("/api/users/login", async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      { expiresIn: "24h" },
     );
 
     // Inclure les informations utilisateur dans la réponse
@@ -154,7 +168,7 @@ router.post(
   "/api/users/:id/photo",
   setUserPhotoUploadPathByUserId,
   memoryUpload.single("file"),
-  cw(userPhotoController.uploadUserPhoto)
+  cw(userPhotoController.uploadUserPhoto),
 );
 
 /**
@@ -178,7 +192,7 @@ router.delete("/api/users/:id/photo", cw(userPhotoController.deleteUserPhoto));
 router.patch(
   "/api/users/:id/photo",
   upload("/JUDOCOACHPRO/user").single("image"),
-  cw(userController.updateProfilePhoto)
+  cw(userController.updateProfilePhoto),
 );
 
 // Route pour ajouter un utilisateur
@@ -212,7 +226,7 @@ router.patch("/api/users/:userId/updateProfileImage", async (req, res) => {
   } catch (error) {
     console.error(
       "Erreur lors de la mise à jour de l'image de profil :",
-      error
+      error,
     );
     res.status(500).send("Erreur lors de la mise à jour de l'image de profil");
   }
@@ -221,7 +235,7 @@ router.patch("/api/users/:userId/updateProfileImage", async (req, res) => {
 // Route pour mettre à jour les informations de l'utilisateur
 router.patch(
   "/api/users/:userId/updateUserProfile",
-  cw(userController.updateUserProfile)
+  cw(userController.updateUserProfile),
 );
 
 /// PUT
@@ -232,7 +246,7 @@ router.put("/api/users/:userId/updateRole", cw(userController.updateUserRole));
 // Route pour mettre à jour le nom, prenom, email et rôle d'un utilisateur
 router.put(
   "/api/users/:userId/updateUserInfo",
-  cw(userController.updateUserInfo)
+  cw(userController.updateUserInfo),
 );
 
 /// DELETE

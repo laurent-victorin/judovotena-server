@@ -1,7 +1,9 @@
 const Users = require("../models/Users");
 const Club = require("../models/Club");
 const Message = require("../models/Message");
+const Acteurs = require("../models/Acteurs");
 const errorController = require("./errorController");
+const UserActeur = require("../models/UserActeur");
 const bcrypt = require("bcrypt");
 const saltRounds = 10; // Définissez le nombre de tours de salt pour bcrypt
 const { Sequelize, Op } = require("sequelize");
@@ -23,6 +25,71 @@ const ROLE_MAP = {
 
 const userController = {
   /// GET
+
+  // Fonction pour obtenir la liste de tous les utilisateurs à partir de acteur_id de la table UserActeur
+  // renvoi user_id et acteur_id, ainsi que les informations de l'utilisateur (nom, prénom, email)
+  getUserIdByActeurId: async (req, res) => {
+    const { acteurId } = req.params;
+
+    try {
+      const users = await UserActeur.findAll({
+        where: { acteur_id: acteurId },
+      });
+
+      if (users.length > 0) {
+        res.json(users);
+      } else {
+        res.status(404).send("Aucun utilisateur trouvé pour cet acteur");
+      }
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des utilisateurs pour cet acteur:",
+        error,
+      );
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  },
+
+  // Fonction pour afficher tous les utilisateurs par ordre alphabétique
+  getAllUsersAlphabetically: async (req, res, next) => {
+    try {
+      const users = await Users.findAll({
+        attributes: ["id", "nom", "prenom", "role_id", "email", "photoURL"], // Ajout de l'email et photoURL
+        include: [
+          {
+            model: Acteurs,
+            as: "Acteurs",
+            attributes: ["id", "nom", "prenom"],
+            through: {
+              attributes: [], // Ne pas inclure les attributs de la table de liaison
+            },
+          },
+        ],
+        order: [
+          ["nom", "ASC"],
+          ["prenom", "ASC"],
+        ],
+      });
+      res.json(
+        users.map((user) => ({
+          id: user.id, // ID de l'utilisateur
+          nom: user.nom, // Nom de l'utilisateur
+          prenom: user.prenom, // Prénom de l'utilisateur
+          role_id: user.role_id, // ID du rôle de l'utilisateur
+          email: user.email, // Email de l'utilisateur
+          photoURL: user.photoURL, // URL de la photo de l'utilisateur
+          acteurs: user.Acteurs.map((officiel) => ({
+            // Mapper les adhérents associés
+            id: officiel.id,
+            nom: officiel.nom,
+            prenom: officiel.prenom,
+          })),
+        })),
+      );
+    } catch (error) {
+      errorController._500(error, req, res);
+    }
+  },
 
   // Récupérer tous les users dans l'ordre alphabétique avec nom, prénom, email, role_id, createdOn, ainsi que le club qui lui ai associé depuis Club (user_id, nom_club,departement_club)
   getAllUsersWithClub: async (req, res, next) => {
@@ -85,7 +152,7 @@ const userController = {
     } catch (error) {
       console.error(
         "Erreur lors de la récupération des informations utilisateur :",
-        error
+        error,
       );
       res.status(500).json({ message: "Erreur interne du serveur." });
     }
@@ -133,7 +200,7 @@ const userController = {
           email: user.email, // Email de l'utilisateur
           photoURL: user.photoURL, // URL de la photo de l'utilisateur
           createdOn: user.createdOn, // Date de création de l'utilisateur
-        }))
+        })),
       );
     } catch (error) {
       errorController._500(error, req, res);
@@ -153,6 +220,17 @@ const userController = {
           "photoURL",
           "createdOn",
         ], // Ajout de l'email et photoURL
+        include: [
+          {
+            model: Acteurs,
+            as: "Acteurs",
+            attributes: ["id", "nom", "prenom"],
+            through: {
+              attributes: [], // Ne pas inclure les attributs de la table de liaison
+            },
+          },
+        ],
+        order: [["createdOn", "DESC"]],
         limit: 10,
       });
       res.json(
@@ -164,7 +242,13 @@ const userController = {
           email: user.email, // Email de l'utilisateur
           photoURL: user.photoURL, // URL de la photo de l'utilisateur
           createdOn: user.createdOn, // Date de création de l'utilisateur
-        }))
+          acteurs: user.Acteurs.map((acteur) => ({
+            // Mapper les adhérents associés
+            id: acteur.id,
+            nom: acteur.nom,
+            prenom: acteur.prenom,
+          })),
+        })),
       );
     } catch (error) {
       errorController._500(error, req, res);
@@ -198,6 +282,63 @@ const userController = {
         res.json({ exists: true });
       } else {
         res.json({ exists: false });
+      }
+    } catch (error) {
+      errorController._500(error, req, res);
+    }
+  },
+
+  // Fonction pour obtenir les id et nom des groupes sur lesquuels les adhérents gérés par l'utilisateur sont inscrits
+  getGroupsByUserId: async (req, res, next) => {
+    const { userId } = req.params;
+
+    try {
+      const groups = await Users.findByPk(userId, {
+        include: [
+          {
+            model: Adherent,
+            as: "Adherents",
+            attributes: [],
+            include: [
+              {
+                model: Group,
+                as: "Groupes",
+                attributes: ["id", "nom"],
+              },
+            ],
+          },
+        ],
+      });
+
+      if (groups) {
+        res.json(groups.Adherents.map((adherent) => adherent.Groupes));
+      } else {
+        res.status(404).send("Utilisateur non trouvé");
+      }
+    } catch (error) {
+      errorController._500(error, req, res);
+    }
+  },
+
+  // Fonction pour obtenir tous les acteurs d'un utilisateur via UserActeur
+  // controllers/userController.js
+  getActeursByUserId: async (req, res, next) => {
+    const { userId } = req.params;
+
+    try {
+      const user = await Users.findByPk(userId, {
+        include: [
+          {
+            model: Acteurs,
+            as: "Acteurs", // Assurez-vous d'utiliser le bon alias défini dans les associations
+          },
+        ],
+      });
+
+      if (user) {
+        res.json(user.Acteurs); // Retournez les acteurs associés à l'utilisateur
+      } else {
+        res.status(404).send("Utilisateur non trouvé");
       }
     } catch (error) {
       errorController._500(error, req, res);
@@ -458,7 +599,7 @@ const userController = {
 
       // normalise -> ensure every role 1..8 is present
       const byId = Object.fromEntries(
-        grouped.map((r) => [Number(r.role_id), Number(r.count)])
+        grouped.map((r) => [Number(r.role_id), Number(r.count)]),
       );
       const roles = Object.entries(ROLE_MAP).map(([id, label]) => ({
         role_id: Number(id),
@@ -478,7 +619,7 @@ const userController = {
       const userCount = await Users.count({
         where: Sequelize.where(
           Sequelize.fn("DATE", Sequelize.col("createdOn")),
-          Sequelize.fn("CURDATE")
+          Sequelize.fn("CURDATE"),
         ),
       });
       res.json({ count: userCount });
@@ -506,7 +647,7 @@ const userController = {
       const token = jwt.sign(
         { userId: user.id, email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: "24h" }
+        { expiresIn: "24h" },
       );
 
       // Inclure les informations utilisateur dans la réponse
