@@ -87,40 +87,52 @@ const validationBadgeController = {
       const page = Math.max(1, parseInt(req.query.page, 10) || 1);
       const limit = Math.min(
         200,
-        Math.max(1, parseInt(req.query.limit, 10) || 50)
+        Math.max(1, parseInt(req.query.limit, 10) || 50),
       );
       const offset = (page - 1) * limit;
 
-      // 1) Dernier badge par utilisateur (1 ligne par user)
-      //    => rapide si index (user_id, validation_date)
-      const latestBadges = await sequelize.query(
+      const normalizedIncludes = (txt) =>
+        (txt || "")
+          .toString()
+          .normalize("NFD")
+          .replace(/\p{Diacritic}/gu, "")
+          .toLowerCase();
+
+      // 1) Récupère TOUS les badges
+      const allBadges = await sequelize.query(
         `
-        SELECT vb.user_id, vb.badge_url, vb.validation_date
-        FROM validation_badges_db vb
-        JOIN (
-          SELECT user_id, MAX(validation_date) AS max_date
-          FROM validation_badges_db
-          GROUP BY user_id
-        ) x ON x.user_id = vb.user_id AND x.max_date = vb.validation_date
-        `,
-        { type: QueryTypes.SELECT }
+      SELECT vb.id, vb.user_id, vb.badge_url, vb.validation_date
+      FROM validation_badges_db vb
+      ORDER BY vb.user_id ASC, vb.validation_date DESC, vb.id DESC
+      `,
+        { type: QueryTypes.SELECT },
       );
 
-      if (!latestBadges.length) {
+      if (!allBadges.length) {
         return res.json({ items: [], total: 0, page, limit });
       }
 
-      const badgeByUser = new Map();
-      const userIds = [];
-      for (const row of latestBadges) {
-        badgeByUser.set(row.user_id, {
+      // 2) Regroupe les badges par utilisateur
+      const badgesByUser = new Map();
+      const userIdsSet = new Set();
+
+      for (const row of allBadges) {
+        if (!badgesByUser.has(row.user_id)) {
+          badgesByUser.set(row.user_id, []);
+        }
+
+        badgesByUser.get(row.user_id).push({
+          id: row.id,
           badge_url: row.badge_url,
           validation_date: row.validation_date,
         });
-        userIds.push(row.user_id);
+
+        userIdsSet.add(row.user_id);
       }
 
-      // 2) Récupère les utilisateurs + leurs clubs (avec role_in_club depuis le pivot)
+      const userIds = Array.from(userIdsSet);
+
+      // 3) Récupère les utilisateurs + clubs
       const users = await Users.findAll({
         where: { id: userIds },
         attributes: ["id", "nom", "prenom", "email", "photoURL"],
@@ -129,7 +141,7 @@ const validationBadgeController = {
             model: Club,
             as: "Clubs",
             attributes: ["id", "nom_club", "departement_club"],
-            through: { attributes: ["role_in_club"] }, // <-- récupère le rôle club
+            through: { attributes: ["role_in_club"] },
           },
         ],
         order: [
@@ -138,29 +150,32 @@ const validationBadgeController = {
         ],
       });
 
-      // Mise en forme + filtres simples côté Node
-      const normalizedIncludes = (txt) =>
-        (txt || "")
-          .toString()
-          .normalize("NFD")
-          .replace(/\p{Diacritic}/gu, "")
-          .toLowerCase();
-
+      // 4) Mise en forme
       let items = users.map((u) => {
         const plain = u.get({ plain: true });
 
-        // Rôles uniques depuis le pivot
         const rolesSet = new Set();
 
         const clubs = (plain.Clubs || []).map((c) => {
           const role = c?.UserClub?.role_in_club || null;
           if (role) rolesSet.add(role);
+
           return {
             id: c.id,
             name: c.nom_club,
             departement: c.departement_club,
-            role_in_club: role, // pratique si on veut afficher rôle par club
+            role_in_club: role,
           };
+        });
+
+        const badges = (badgesByUser.get(plain.id) || []).sort((a, b) => {
+          const da = a?.validation_date
+            ? new Date(a.validation_date).getTime()
+            : 0;
+          const db = b?.validation_date
+            ? new Date(b.validation_date).getTime()
+            : 0;
+          return db - da;
         });
 
         return {
@@ -170,31 +185,37 @@ const validationBadgeController = {
           email: plain.email,
           photoURL: plain.photoURL,
           clubs,
-          primaryRoles: Array.from(rolesSet), // <-- rôles agrégés
-          badge: badgeByUser.get(plain.id) || null, // toujours défini ici
+          primaryRoles: Array.from(rolesSet),
+          badges, // <-- TOUS les badges
+          badge: badges[0] || null, // <-- dernier badge conservé pour compatibilité
         };
       });
 
-      // Filtre comité/département (si fourni)
+      // 5) Filtre comité/département
       if (departement) {
         items = items.filter((u) =>
-          u.clubs.some((c) => (c.departement || "") === departement)
+          u.clubs.some(
+            (c) => String(c.departement || "") === String(departement),
+          ),
         );
       }
 
-      // Filtre recherche 'q' (nom/prénom/email/nom_club/rôles)
+      // 6) Filtre recherche
       if (q) {
+        const needle = normalizedIncludes(q);
+
         items = items.filter((u) => {
           const hay = [
             `${u.prenom} ${u.nom}`,
             u.email,
             ...u.clubs.map((c) => c.name),
+            ...u.clubs.map((c) => c.departement),
             ...(u.primaryRoles || []),
           ]
             .filter(Boolean)
             .map(normalizedIncludes)
             .join(" ");
-          const needle = normalizedIncludes(q);
+
           return hay.includes(needle);
         });
       }
@@ -205,7 +226,6 @@ const validationBadgeController = {
       return res.json({ items: paged, total, page, limit });
     } catch (error) {
       console.error(error);
-      // on reste cohérent avec ton handler d'erreurs
       return res.status(500).json({
         error: "Erreur serveur lors du chargement des utilisateurs avec badge.",
       });

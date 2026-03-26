@@ -1,5 +1,5 @@
 const { DataTypes } = require("sequelize");
-const sequelize = require("../database"); // Adaptez le chemin selon votre configuration
+const sequelize = require("../database");
 
 const ReglementArbitrage = sequelize.define(
   "ReglementArbitrage",
@@ -25,10 +25,15 @@ const ReglementArbitrage = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    display_order: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "reglement_arbitrage_db",
-    timestamps: false, // Désactivez la gestion automatique des colonnes createdAt et updatedAt
+    timestamps: false,
   }
 );
 

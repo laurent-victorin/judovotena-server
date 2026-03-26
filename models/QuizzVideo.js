@@ -31,7 +31,7 @@ const QuizzVideo = sequelize.define(
     },
     description: {
       type: DataTypes.TEXT,
-      allowNull: false,
+      allowNull: true,
     },
   },
   {

@@ -95,7 +95,15 @@ const userController = {
   getAllUsersWithClub: async (req, res, next) => {
     try {
       const users = await Users.findAll({
-        attributes: ["id", "nom", "prenom", "email", "role_id", "createdOn"],
+        attributes: [
+          "id",
+          "nom",
+          "prenom",
+          "email",
+          "role_id",
+          "createdOn",
+          "photoURL",
+        ],
         include: [
           // ⬇️ Many-to-many : tous les clubs liés à l'utilisateur
           {

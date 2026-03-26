@@ -33,7 +33,7 @@ const quizzvideoController = {
         lien_url_video,
         lien_url_image,
         decision,
-        description,
+        description: description?.trim() ? description.trim() : null,
       });
       res.json(quizzvideo);
     } catch (error) {
@@ -60,7 +60,7 @@ const quizzvideoController = {
           lien_url_video,
           lien_url_image,
           decision,
-          description,
+          description: description?.trim() ? description.trim() : null,
         },
         {
           where: {
