@@ -25,11 +25,16 @@ const Event = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    suivi_event: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     tableName: "event_db",
     timestamps: false, // Mettre à true si vous avez des champs createdAt et updatedAt
-  }
+  },
 );
 
 module.exports = Event;

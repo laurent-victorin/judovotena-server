@@ -54,6 +54,7 @@ const eventController = {
       agenda_url,
       organisateur,
       is_active,
+      suivi_event,
     } = req.body;
 
     try {
@@ -72,6 +73,7 @@ const eventController = {
         agenda_url,
         organisateur,
         is_active,
+        suivi_event,
       });
 
       res.status(201).json(newEvent);
@@ -109,6 +111,7 @@ const eventController = {
             agenda_url: eventData.agenda_url,
             organisateur: eventData.organisateur,
             is_active: eventData.is_active === "true",
+            suivi_event: eventData.suivi_event,
           });
           console.log("Nouvel événement créé :", eventData.titre);
         } else {
@@ -129,6 +132,7 @@ const eventController = {
               agenda_url: eventData.agenda_url,
               organisateur: eventData.organisateur,
               is_active: eventData.is_active === "true",
+              suivi_event: eventData.suivi_event,
             },
           });
 
@@ -164,6 +168,7 @@ const eventController = {
       agenda_url,
       organisateur,
       is_active,
+      suivi_event,
     } = req.body;
     try {
       const event = await Event.findByPk(id);
@@ -181,7 +186,7 @@ const eventController = {
         event.agenda_url = agenda_url;
         event.organisateur = organisateur;
         event.is_active = is_active;
-
+        event.suivi_event = suivi_event;
         await event.save();
         res.json(event);
       }

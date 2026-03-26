@@ -28,7 +28,16 @@ const castController = {
     try {
       // Si tes relations.js sont bien chargées, include marche nickel
       const event = await Event.findByPk(eventId, {
-        attributes: ["id", "titre", "start", "end", "type_event", "level_event"],
+        attributes: [
+          "id",
+          "titre",
+          "start",
+          "end",
+          "type_event",
+          "level_event",
+          "suivi_event",
+          "photo_url",
+        ],
         include: [
           {
             model: EventMat,
@@ -135,7 +144,9 @@ const castController = {
 
     if (!eventId) return res.status(400).json({ message: "eventId invalide" });
     if (!assertMatNumber(matNumber))
-      return res.status(400).json({ message: "matNumber doit être entre 1 et 10" });
+      return res
+        .status(400)
+        .json({ message: "matNumber doit être entre 1 et 10" });
 
     const { label, is_open, sort_order, slots = [] } = req.body || {};
 
@@ -152,7 +163,9 @@ const castController = {
       : [];
 
     if (cleanSlots.length > 3) {
-      return res.status(400).json({ message: "Maximum 3 catégories par tapis" });
+      return res
+        .status(400)
+        .json({ message: "Maximum 3 catégories par tapis" });
     }
 
     // éviter doublons slot_index
@@ -191,7 +204,7 @@ const castController = {
             created_at: new Date(),
             updated_at: new Date(),
           },
-          { transaction: t }
+          { transaction: t },
         );
       } else {
         await mat.update(
@@ -204,7 +217,7 @@ const castController = {
                 : mat.sort_order,
             updated_at: new Date(),
           },
-          { transaction: t }
+          { transaction: t },
         );
       }
 
@@ -225,7 +238,7 @@ const castController = {
             created_at: new Date(),
             updated_at: new Date(),
           })),
-          { transaction: t }
+          { transaction: t },
         );
       }
 
@@ -250,7 +263,9 @@ const castController = {
 
     if (!eventId) return res.status(400).json({ message: "eventId invalide" });
     if (!assertMatNumber(matNumber))
-      return res.status(400).json({ message: "matNumber doit être entre 1 et 10" });
+      return res
+        .status(400)
+        .json({ message: "matNumber doit être entre 1 et 10" });
 
     try {
       const mat = await EventMat.findOne({
@@ -275,36 +290,52 @@ const castController = {
     if (!eventId) return res.status(400).json({ message: "eventId invalide" });
 
     const { mode, active_message_id, updated_by_user_id } = req.body || {};
-    const safeMode =
-      mode === "MESSAGE" || mode === "MATS" ? mode : "MATS";
+    const safeMode = mode === "MESSAGE" || mode === "MATS" ? mode : "MATS";
 
     try {
       // vérifier event existe
       const ev = await Event.findByPk(eventId);
-      if (!ev) return res.status(404).json({ message: "Événement introuvable" });
+      if (!ev)
+        return res.status(404).json({ message: "Événement introuvable" });
 
-      let state = await EventCastState.findOne({ where: { event_id: eventId } });
+      let state = await EventCastState.findOne({
+        where: { event_id: eventId },
+      });
 
       if (!state) {
         state = await EventCastState.create({
           event_id: eventId,
           mode: safeMode,
-          active_message_id: active_message_id ? toInt(active_message_id) : null,
-          updated_by_user_id: updated_by_user_id ? toInt(updated_by_user_id) : null,
+          active_message_id: active_message_id
+            ? toInt(active_message_id)
+            : null,
+          updated_by_user_id: updated_by_user_id
+            ? toInt(updated_by_user_id)
+            : null,
           updated_at: new Date(),
         });
       } else {
         await state.update({
           mode: safeMode,
-          active_message_id: active_message_id ? toInt(active_message_id) : null,
-          updated_by_user_id: updated_by_user_id ? toInt(updated_by_user_id) : null,
+          active_message_id: active_message_id
+            ? toInt(active_message_id)
+            : null,
+          updated_by_user_id: updated_by_user_id
+            ? toInt(updated_by_user_id)
+            : null,
           updated_at: new Date(),
         });
       }
 
       // renvoyer avec ActiveMessage si relations présentes
       const full = await EventCastState.findByPk(state.id, {
-        include: [{ model: EventBroadcastMessage, as: "ActiveMessage", required: false }],
+        include: [
+          {
+            model: EventBroadcastMessage,
+            as: "ActiveMessage",
+            required: false,
+          },
+        ],
       });
 
       res.json(full);
@@ -336,7 +367,9 @@ const castController = {
 
     const target = target_mat_number !== null ? toInt(target_mat_number) : null;
     if (target !== null && !assertMatNumber(target)) {
-      return res.status(400).json({ message: "target_mat_number doit être entre 1 et 10" });
+      return res
+        .status(400)
+        .json({ message: "target_mat_number doit être entre 1 et 10" });
     }
 
     try {
@@ -392,15 +425,18 @@ const castController = {
         target_mat_number === undefined
           ? msg.target_mat_number
           : target_mat_number === null
-          ? null
-          : toInt(target_mat_number);
+            ? null
+            : toInt(target_mat_number);
 
       if (target !== null && target !== undefined && !assertMatNumber(target)) {
-        return res.status(400).json({ message: "target_mat_number doit être entre 1 et 10" });
+        return res
+          .status(400)
+          .json({ message: "target_mat_number doit être entre 1 et 10" });
       }
 
       await msg.update({
-        type: type !== undefined ? String(type || "INFO").slice(0, 20) : msg.type,
+        type:
+          type !== undefined ? String(type || "INFO").slice(0, 20) : msg.type,
         title:
           title !== undefined
             ? title
@@ -417,8 +453,18 @@ const castController = {
             : msg.severity,
         is_pinned: is_pinned !== undefined ? Boolean(is_pinned) : msg.is_pinned,
         is_active: is_active !== undefined ? Boolean(is_active) : msg.is_active,
-        starts_at: starts_at !== undefined ? (starts_at ? new Date(starts_at) : null) : msg.starts_at,
-        ends_at: ends_at !== undefined ? (ends_at ? new Date(ends_at) : null) : msg.ends_at,
+        starts_at:
+          starts_at !== undefined
+            ? starts_at
+              ? new Date(starts_at)
+              : null
+            : msg.starts_at,
+        ends_at:
+          ends_at !== undefined
+            ? ends_at
+              ? new Date(ends_at)
+              : null
+            : msg.ends_at,
         updated_at: new Date(),
       });
 
@@ -459,7 +505,9 @@ const castController = {
 
     if (!eventId) return res.status(400).json({ message: "eventId invalide" });
     if (!assertMatNumber(matNumber))
-      return res.status(400).json({ message: "matNumber doit être entre 1 et 10" });
+      return res
+        .status(400)
+        .json({ message: "matNumber doit être entre 1 et 10" });
 
     const t = await sequelize.transaction();
     try {
