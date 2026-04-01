@@ -5,61 +5,96 @@ const cw = require("../controllers/controllerWrapper");
 const authenticateToken = require("../middlewares/authenticateToken");
 
 /// GET
-// Route pour obtenir tous les résultats
 router.get(
   "/api/acteursevents/allresults",
+  authenticateToken,
   cw(acteurEventController.getAllResults),
 );
 
-// Route pour obtenir la liste des acteurs ayant participé à un événement
 router.get(
   "/api/acteursevents/getActeursByEventId/:eventId",
+  authenticateToken,
   cw(acteurEventController.getActeursByEventId),
 );
 
-// Route pour obtenir la liste des événements auxquels un acteur a participé
 router.get(
   "/api/acteursevents/getEventsByActeurId/:acteurId",
+  authenticateToken,
   cw(acteurEventController.getEventsByActeurId),
 );
 
-// NOUVEAU : récupérer les convocations de l'acteur lié à l'utilisateur connecté
 router.get(
   "/api/acteursevents/myConvocations",
+  authenticateToken,
   cw(acteurEventController.getMyConvocations),
 );
 
+router.get(
+  "/api/acteursevents/getActeurEventById/:acteurId/:eventId",
+  authenticateToken,
+  cw(acteurEventController.getActeurEventById),
+);
+
+router.get(
+  "/api/acteursevents/getSupportRequestsByEventId/:eventId",
+  authenticateToken,
+  cw(acteurEventController.getSupportRequestsByEventId),
+);
+
 /// POST
-// Route pour ajouter un acteur à un événement
 router.post(
   "/api/acteursevents/assignActorToEvent",
+  authenticateToken,
   cw(acteurEventController.assignActorToEvent),
 );
 
 /// PUT
-// Route pour mettre à jour un acteur dans un événement
 router.put(
   "/api/acteursevents/updateActeurInEvent/:acteurId/:eventId",
+  authenticateToken,
   cw(acteurEventController.updateActeurInEvent),
 );
 
-// Route pour toggle la validation d'un acteur dans un événement
 router.put(
   "/api/acteursevents/toggleValidation/:acteurId/:eventId",
+  authenticateToken,
   cw(acteurEventController.toggleValidation),
 );
 
-// NOUVEAU : répondre à une convocation
 router.put(
   "/api/acteursevents/respondToConvocation/:eventId",
   authenticateToken,
   cw(acteurEventController.respondToConvocation),
 );
 
+router.put(
+  "/api/acteursevents/updateAssignment/:acteurId/:eventId",
+  authenticateToken,
+  cw(acteurEventController.updateAssignment),
+);
+
+router.put(
+  "/api/acteursevents/updateSupportStatus/:acteurId/:eventId",
+  authenticateToken,
+  cw(acteurEventController.updateSupportStatus),
+);
+
+router.put(
+  "/api/acteursevents/updateAttendance/:acteurId/:eventId",
+  authenticateToken,
+  cw(acteurEventController.updateAttendance),
+);
+
+router.put(
+  "/api/acteursevents/bulkUpdateAssignments/:eventId",
+  authenticateToken,
+  cw(acteurEventController.bulkUpdateAssignments),
+);
+
 /// DELETE
-// Route pour supprimer un acteur d'un événement
 router.delete(
   "/api/acteursevents/removeActeurFromEvent/:acteurId/:eventId",
+  authenticateToken,
   cw(acteurEventController.removeActeurFromEvent),
 );
 
