@@ -372,13 +372,177 @@ const acteurEventController = {
           support_request_comment !== undefined
             ? new Date()
             : null,
-        transport_support_status:
-          parsedTransport === true ? "pending" : null,
+        transport_support_status: parsedTransport === true ? "pending" : null,
         accommodation_support_status:
           parsedAccommodation === true ? "pending" : null,
       });
 
       res.json(acteurEvent);
+    } catch (error) {
+      errorController._500(error, req, res);
+    }
+  },
+
+  // Synchroniser les convocations d'un événement sur un périmètre d'acteurs
+  syncActorsSelectionForEvent: async (req, res, next) => {
+    try {
+      const { event_id, acteur_ids, scope_acteur_ids, poste, tapis } = req.body;
+
+      const parsedEventId = Number(event_id);
+      const cleanedPoste = cleanNullableString(poste);
+      const cleanedTapis = cleanNullableString(tapis);
+
+      const selectedActeurIds = [
+        ...new Set(
+          (Array.isArray(acteur_ids) ? acteur_ids : [])
+            .map((id) => Number(id))
+            .filter((id) => Number.isInteger(id) && id > 0),
+        ),
+      ];
+
+      const scopeActeurIds = [
+        ...new Set(
+          (Array.isArray(scope_acteur_ids) ? scope_acteur_ids : [])
+            .map((id) => Number(id))
+            .filter((id) => Number.isInteger(id) && id > 0),
+        ),
+      ];
+
+      if (!parsedEventId) {
+        return res.status(400).json({
+          message: "event_id invalide",
+        });
+      }
+
+      if (!cleanedPoste) {
+        return res.status(400).json({
+          message: "Le poste est obligatoire",
+        });
+      }
+
+      if (scopeActeurIds.length === 0) {
+        return res.status(400).json({
+          message: "scope_acteur_ids doit contenir au moins un acteur",
+        });
+      }
+
+      const selectedOutsideScope = selectedActeurIds.filter(
+        (id) => !scopeActeurIds.includes(id),
+      );
+
+      if (selectedOutsideScope.length > 0) {
+        return res.status(400).json({
+          message: "Tous les acteur_ids doivent appartenir à scope_acteur_ids",
+        });
+      }
+
+      const event = await Event.findByPk(parsedEventId, {
+        attributes: ["id", "titre", "start"],
+      });
+
+      if (!event) {
+        return res.status(404).json({
+          message: "Événement introuvable",
+        });
+      }
+
+      const scopeActeurs = await Acteurs.findAll({
+        where: {
+          id: {
+            [Op.in]: scopeActeurIds,
+          },
+        },
+        attributes: ["id"],
+      });
+
+      const existingScopeIds = scopeActeurs.map((a) => Number(a.id));
+      const missingScopeIds = scopeActeurIds.filter(
+        (id) => !existingScopeIds.includes(id),
+      );
+
+      if (missingScopeIds.length > 0) {
+        return res.status(400).json({
+          message: `Acteurs introuvables : ${missingScopeIds.join(", ")}`,
+        });
+      }
+
+      const selectedSet = new Set(selectedActeurIds);
+
+      let createdActeurIds = [];
+      let removedActeurIds = [];
+      let keptActeurIds = [];
+
+      await sequelize.transaction(async (transaction) => {
+        const existingLinks = await ActeurEvent.findAll({
+          where: {
+            event_id: parsedEventId,
+            acteur_id: {
+              [Op.in]: scopeActeurIds,
+            },
+          },
+          attributes: ["acteur_id"],
+          transaction,
+        });
+
+        const existingIds = new Set(
+          existingLinks.map((item) => Number(item.acteur_id)),
+        );
+
+        createdActeurIds = selectedActeurIds.filter(
+          (id) => !existingIds.has(id),
+        );
+        keptActeurIds = selectedActeurIds.filter((id) => existingIds.has(id));
+        removedActeurIds = scopeActeurIds.filter(
+          (id) => existingIds.has(id) && !selectedSet.has(id),
+        );
+
+        if (createdActeurIds.length > 0) {
+          await ActeurEvent.bulkCreate(
+            createdActeurIds.map((acteurId) => ({
+              acteur_id: acteurId,
+              event_id: parsedEventId,
+              poste: cleanedPoste,
+              tapis: cleanedTapis,
+              response_status: "pending",
+              response_reason: null,
+              responded_at: null,
+              need_transport_support: null,
+              need_accommodation_support: null,
+              support_request_comment: null,
+              support_requested_at: null,
+              transport_support_status: null,
+              accommodation_support_status: null,
+              attendance_status: null,
+            })),
+            { transaction },
+          );
+        }
+
+        if (removedActeurIds.length > 0) {
+          await ActeurEvent.destroy({
+            where: {
+              event_id: parsedEventId,
+              acteur_id: {
+                [Op.in]: removedActeurIds,
+              },
+            },
+            transaction,
+          });
+        }
+      });
+
+      return res.json({
+        success: true,
+        event_id: parsedEventId,
+        scopeCount: scopeActeurIds.length,
+        selectedCount: selectedActeurIds.length,
+        createdCount: createdActeurIds.length,
+        removedCount: removedActeurIds.length,
+        keptCount: keptActeurIds.length,
+        createdActeurIds,
+        removedActeurIds,
+        keptActeurIds,
+      });
     } catch (error) {
       errorController._500(error, req, res);
     }
@@ -683,8 +847,9 @@ const acteurEventController = {
         }
 
         if (hasOwn(req.body, "support_request_comment")) {
-          acteurEvent.support_request_comment =
-            cleanNullableString(support_request_comment);
+          acteurEvent.support_request_comment = cleanNullableString(
+            support_request_comment,
+          );
         }
 
         if (

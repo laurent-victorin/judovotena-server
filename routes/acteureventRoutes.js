@@ -48,6 +48,12 @@ router.post(
   cw(acteurEventController.assignActorToEvent),
 );
 
+router.post(
+  "/api/acteursevents/syncActorsSelectionForEvent",
+  authenticateToken,
+  cw(acteurEventController.syncActorsSelectionForEvent),
+);
+
 /// PUT
 router.put(
   "/api/acteursevents/updateActeurInEvent/:acteurId/:eventId",

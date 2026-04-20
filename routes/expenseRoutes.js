@@ -9,19 +9,34 @@ const ExpenseClaimController = require("../controllers/ExpenseClaimController");
 const ExpenseClaimItemController = require("../controllers/ExpenseClaimItemController");
 const ExpenseClaimAttachmentController = require("../controllers/ExpenseClaimAttachmentController");
 const { uploadExpenseAttachment } = require("../services/multer-config");
+const expenseDistanceController = require("../controllers/expenseDistanceController");
+
+router.post(
+  "/api/expense/claims/compute-distance",
+  cw(expenseDistanceController.getExpenseDrivingDistance),
+);
 
 /* ======================================================================
    ✅ PROFIL FRAIS (coordonnées pré-remplies)
    ====================================================================== */
 
 // Récupérer le profil frais d’un user
-router.get("/api/users/:userId/expense-profile", cw(ExpenseProfileController.getByUser));
+router.get(
+  "/api/users/:userId/expense-profile",
+  cw(ExpenseProfileController.getByUser),
+);
 
 // Créer / mettre à jour (upsert) le profil frais d’un user
-router.post("/api/users/:userId/expense-profile", cw(ExpenseProfileController.upsertByUser));
+router.post(
+  "/api/users/:userId/expense-profile",
+  cw(ExpenseProfileController.upsertByUser),
+);
 
 // (optionnel) supprimer le profil frais
-router.delete("/api/users/:userId/expense-profile", cw(ExpenseProfileController.deleteByUser));
+router.delete(
+  "/api/users/:userId/expense-profile",
+  cw(ExpenseProfileController.deleteByUser),
+);
 
 /* ======================================================================
    ✅ CODES BUDGÉTAIRES (globaux)
@@ -53,10 +68,16 @@ router.get("/api/expense/claims/count", cw(ExpenseClaimController.count));
 router.get("/api/expense/claims/stats", cw(ExpenseClaimController.getStats));
 
 // Export Excel (stream ou génération fichier)
-router.get("/api/expense/claims/export", cw(ExpenseClaimController.exportExcel));
+router.get(
+  "/api/expense/claims/export",
+  cw(ExpenseClaimController.exportExcel),
+);
 
 // Mes fiches (côté utilisateur)
-router.get("/api/users/:userId/expense/claims", cw(ExpenseClaimController.getByUser));
+router.get(
+  "/api/users/:userId/expense/claims",
+  cw(ExpenseClaimController.getByUser),
+);
 
 // Détail d’une fiche
 router.get("/api/expense/claims/:id", cw(ExpenseClaimController.getById));
@@ -75,26 +96,44 @@ router.delete("/api/expense/claims/:id", cw(ExpenseClaimController.delete));
    ====================================================================== */
 
 // Soumettre la fiche (draft -> submitted)
-router.post("/api/expense/claims/:id/submit", cw(ExpenseClaimController.submit));
+router.post(
+  "/api/expense/claims/:id/submit",
+  cw(ExpenseClaimController.submit),
+);
 
 // Admin : approuver
-router.post("/api/expense/claims/:id/approve", cw(ExpenseClaimController.approve));
+router.post(
+  "/api/expense/claims/:id/approve",
+  cw(ExpenseClaimController.approve),
+);
 
 // Admin : rejeter
-router.post("/api/expense/claims/:id/reject", cw(ExpenseClaimController.reject));
+router.post(
+  "/api/expense/claims/:id/reject",
+  cw(ExpenseClaimController.reject),
+);
 
 // Admin : marquer payé
-router.post("/api/expense/claims/:id/mark-paid", cw(ExpenseClaimController.markPaid));
+router.post(
+  "/api/expense/claims/:id/mark-paid",
+  cw(ExpenseClaimController.markPaid),
+);
 
 /* ======================================================================
    ✅ LIGNES DE FRAIS (ExpenseClaimItem)
    ====================================================================== */
 
 // Liste des lignes d’une fiche
-router.get("/api/expense/claims/:claimId/items", cw(ExpenseClaimItemController.getByClaim));
+router.get(
+  "/api/expense/claims/:claimId/items",
+  cw(ExpenseClaimItemController.getByClaim),
+);
 
 // Ajouter une ligne
-router.post("/api/expense/claims/:claimId/items", cw(ExpenseClaimItemController.create));
+router.post(
+  "/api/expense/claims/:claimId/items",
+  cw(ExpenseClaimItemController.create),
+);
 
 // Modifier une ligne
 router.put("/api/expense/items/:id", cw(ExpenseClaimItemController.update));
@@ -107,23 +146,29 @@ router.delete("/api/expense/items/:id", cw(ExpenseClaimItemController.delete));
    ====================================================================== */
 
 // Liste des fichiers d’une fiche
-router.get("/api/expense/claims/:claimId/attachments", cw(ExpenseClaimAttachmentController.getByClaim));
+router.get(
+  "/api/expense/claims/:claimId/attachments",
+  cw(ExpenseClaimAttachmentController.getByClaim),
+);
 
 // Upload justificatif (sur une fiche)
 router.post(
   "/api/expense/claims/:claimId/attachments",
   uploadExpenseAttachment.single("file"), // ✅ champ "file"
-  cw(ExpenseClaimAttachmentController.uploadToClaim)
+  cw(ExpenseClaimAttachmentController.uploadToClaim),
 );
 
 // Upload justificatif (lié à une ligne)
 router.post(
   "/api/expense/items/:itemId/attachments",
   uploadExpenseAttachment.single("file"), // ✅ champ "file"
-  cw(ExpenseClaimAttachmentController.uploadToItem)
+  cw(ExpenseClaimAttachmentController.uploadToItem),
 );
 
 // Supprimer un fichier
-router.delete("/api/expense/attachments/:id", cw(ExpenseClaimAttachmentController.delete));
+router.delete(
+  "/api/expense/attachments/:id",
+  cw(ExpenseClaimAttachmentController.delete),
+);
 
 module.exports = router;
