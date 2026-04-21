@@ -25,9 +25,14 @@ async function recalcTotals(claimId, t) {
   const indRep = Number(claim.indemnite_representation || 0);
 
   const total_frais = Number(itemsSum.toFixed(2));
-  const total_general = Number((itemsSum + trajet + indTenue + indRep).toFixed(2));
+  const total_general = Number(
+    (itemsSum + trajet + indTenue + indRep).toFixed(2),
+  );
 
-  await claim.update({ total_frais, total_general, updated_at: new Date() }, { transaction: t });
+  await claim.update(
+    { total_frais, total_general, updated_at: new Date() },
+    { transaction: t },
+  );
 }
 
 const ExpenseClaimItemController = {
@@ -59,9 +64,12 @@ const ExpenseClaimItemController = {
         await t.rollback();
         return res.status(404).json({ message: "Fiche introuvable" });
       }
-      if (claim.statut !== "draft") {
+      if (!["draft", "submitted", "rejected"].includes(claim.statut)) {
         await t.rollback();
-        return res.status(400).json({ message: "Ajout ligne impossible : fiche non brouillon." });
+        return res.status(400).json({
+          message:
+            "Ajout ligne impossible : seules les fiches brouillon, soumises ou rejetées sont modifiables.",
+        });
       }
 
       const type = req.body.type;
@@ -82,7 +90,7 @@ const ExpenseClaimItemController = {
           created_at: new Date(),
           updated_at: new Date(),
         },
-        { transaction: t }
+        { transaction: t },
       );
 
       await recalcTotals(claimId, t);
@@ -108,20 +116,28 @@ const ExpenseClaimItemController = {
         return res.status(404).json({ message: "Ligne introuvable" });
       }
 
-      const claim = await ExpenseClaim.findByPk(row.expense_claim_id, { transaction: t });
+      const claim = await ExpenseClaim.findByPk(row.expense_claim_id, {
+        transaction: t,
+      });
       if (!claim) {
         await t.rollback();
         return res.status(404).json({ message: "Fiche introuvable" });
       }
-      if (claim.statut !== "draft") {
+      if (!["draft", "submitted", "rejected"].includes(claim.statut)) {
         await t.rollback();
-        return res.status(400).json({ message: "Modification ligne impossible : fiche non brouillon." });
+        return res.status(400).json({
+          message:
+            "Modification ligne impossible : seules les fiches brouillon, soumises ou rejetées sont modifiables.",
+        });
       }
 
       const payload = {
         type: req.body.type ?? row.type,
         date_frais: req.body.date_frais ?? row.date_frais,
-        montant: req.body.montant == null ? row.montant : (numOrNull(req.body.montant) ?? row.montant),
+        montant:
+          req.body.montant == null
+            ? row.montant
+            : (numOrNull(req.body.montant) ?? row.montant),
         description: req.body.description ?? row.description,
         updated_at: new Date(),
       };
@@ -150,14 +166,19 @@ const ExpenseClaimItemController = {
         return res.status(404).json({ message: "Ligne introuvable" });
       }
 
-      const claim = await ExpenseClaim.findByPk(row.expense_claim_id, { transaction: t });
+      const claim = await ExpenseClaim.findByPk(row.expense_claim_id, {
+        transaction: t,
+      });
       if (!claim) {
         await t.rollback();
         return res.status(404).json({ message: "Fiche introuvable" });
       }
-      if (claim.statut !== "draft") {
+      if (!["draft", "submitted", "rejected"].includes(claim.statut)) {
         await t.rollback();
-        return res.status(400).json({ message: "Suppression ligne impossible : fiche non brouillon." });
+        return res.status(400).json({
+          message:
+            "Suppression ligne impossible : seules les fiches brouillon, soumises ou rejetées sont modifiables.",
+        });
       }
 
       const claimId = row.expense_claim_id;

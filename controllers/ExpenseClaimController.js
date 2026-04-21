@@ -489,12 +489,17 @@ const ExpenseClaimController = {
       const id = Number(req.params.id);
 
       const row = await ExpenseClaim.findByPk(id);
-      if (!row) return res.status(404).json({ message: "Fiche introuvable" });
+      if (!row) {
+        return res.status(404).json({ message: "Fiche introuvable" });
+      }
 
-      // (sécurité simple) si pas draft => bloquer modifications "utilisateur"
-      if (row.statut !== "draft") {
+      // ✅ correction rapide :
+      // autoriser modification si draft / submitted / rejected
+      // bloquer si approved / paid
+      if (!["draft", "submitted", "rejected"].includes(row.statut)) {
         return res.status(400).json({
-          message: "Modification non autorisée : fiche non brouillon.",
+          message:
+            "Modification non autorisée : seules les fiches brouillon, soumises ou rejetées peuvent être modifiées.",
         });
       }
 
@@ -509,7 +514,6 @@ const ExpenseClaimController = {
           ? Number(!!row.covoiturage)
           : Number(!!req.body.covoiturage);
 
-      // rétrocompat front : carpool_role/carpool_with
       const roleFromBody = req.body.covoiturage_role ?? req.body.carpool_role;
       const withFromBody = req.body.covoiturage_avec ?? req.body.carpool_with;
 
@@ -531,8 +535,6 @@ const ExpenseClaimController = {
       let next_covoiturage_nb_passagers = nbFromBody ?? 0;
 
       // ===== 2) Normaliser cohérence covoiturage =====
-
-      // si pas voiture => covoiturage impossible
       let covoiturage =
         next_moyen_transport !== "voiture" ? 0 : next_covoiturage;
 
@@ -543,7 +545,6 @@ const ExpenseClaimController = {
         : 0;
 
       if (covoiturage) {
-        // validation role
         if (
           covoiturage_role !== "Conducteur" &&
           covoiturage_role !== "Passager"
@@ -554,7 +555,6 @@ const ExpenseClaimController = {
           });
         }
 
-        // validation "avec qui"
         if (!covoiturage_avec) {
           return res.status(400).json({
             message: "covoiturage_avec est requis lorsque covoiturage = true",
@@ -562,7 +562,7 @@ const ExpenseClaimController = {
         }
 
         if (covoiturage_role === "Passager") {
-          covoiturage_nb_passagers = 0; // n'a pas de sens en passager
+          covoiturage_nb_passagers = 0;
         } else {
           covoiturage_nb_passagers = clampInt(
             Math.floor(Number(covoiturage_nb_passagers || 0)),
@@ -571,7 +571,6 @@ const ExpenseClaimController = {
           );
         }
       } else {
-        // reset si covoiturage désactivé
         covoiturage_role = null;
         covoiturage_avec = null;
         covoiturage_nb_passagers = 0;
@@ -587,6 +586,7 @@ const ExpenseClaimController = {
             : Number(!!req.body.trajet_necessaire),
 
         moyen_transport: next_moyen_transport,
+
         aller_retour:
           req.body.aller_retour == null
             ? row.aller_retour
@@ -599,16 +599,18 @@ const ExpenseClaimController = {
           req.body.distance_km == null
             ? row.distance_km
             : numOrNull(req.body.distance_km),
+
         taux_km:
           req.body.taux_km == null ? row.taux_km : numOrNull(req.body.taux_km),
+
         montant_trajet:
           req.body.montant_trajet == null
             ? row.montant_trajet
             : numOrNull(req.body.montant_trajet),
 
         covoiturage,
-        covoiturage_role, // ✅ NEW
-        covoiturage_nb_passagers, // ✅ NEW
+        covoiturage_role,
+        covoiturage_nb_passagers,
         covoiturage_avec,
 
         indemnite_tenue:
@@ -651,26 +653,48 @@ const ExpenseClaimController = {
 
   // DELETE /api/expense/claims/:id
   delete: async (req, res) => {
+    const t = await sequelize.transaction();
     try {
       const id = Number(req.params.id);
 
-      const row = await ExpenseClaim.findByPk(id);
-      if (!row) return res.status(404).json({ message: "Fiche introuvable" });
+      const row = await ExpenseClaim.findByPk(id, { transaction: t });
+      if (!row) {
+        await t.rollback();
+        return res.status(404).json({ message: "Fiche introuvable" });
+      }
 
-      if (row.statut !== "draft") {
+      // ✅ correction rapide :
+      if (!["draft", "submitted", "rejected"].includes(row.statut)) {
+        await t.rollback();
         return res.status(400).json({
-          message: "Suppression non autorisée : fiche non brouillon.",
+          message:
+            "Suppression non autorisée : seules les fiches brouillon, soumises ou rejetées peuvent être supprimées.",
         });
       }
 
-      await row.destroy();
+      // supprime d'abord tous les justificatifs liés à la fiche
+      await ExpenseClaimAttachment.destroy({
+        where: { expense_claim_id: id },
+        transaction: t,
+      });
+
+      // puis les lignes
+      await ExpenseClaimItem.destroy({
+        where: { expense_claim_id: id },
+        transaction: t,
+      });
+
+      // puis la fiche
+      await row.destroy({ transaction: t });
+
+      await t.commit();
       return res.json({ ok: true });
     } catch (error) {
+      await t.rollback();
       console.error("ExpenseClaimController.delete error:", error);
       return res.status(500).json({ message: "Erreur serveur", error });
     }
   },
-
   // POST /api/expense/claims/:id/submit
   submit: async (req, res) => {
     try {

@@ -31,10 +31,11 @@ const ExpenseClaimAttachmentController = {
 
       const claim = await ExpenseClaim.findByPk(claimId);
       if (!claim) return res.status(404).json({ message: "Fiche introuvable" });
-      if (claim.statut !== "draft") {
-        return res
-          .status(400)
-          .json({ message: "Upload impossible : fiche non brouillon." });
+      if (!["draft", "submitted", "rejected"].includes(claim.statut)) {
+        return res.status(400).json({
+          message:
+            "Upload impossible : seules les fiches brouillon, soumises ou rejetées sont modifiables.",
+        });
       }
 
       // Cas 1 : multer -> req.file
@@ -85,10 +86,11 @@ const ExpenseClaimAttachmentController = {
 
       const claim = await ExpenseClaim.findByPk(item.expense_claim_id);
       if (!claim) return res.status(404).json({ message: "Fiche introuvable" });
-      if (claim.statut !== "draft") {
-        return res
-          .status(400)
-          .json({ message: "Upload impossible : fiche non brouillon." });
+      if (!["draft", "submitted", "rejected"].includes(claim.statut)) {
+        return res.status(400).json({
+          message:
+            "Upload impossible : seules les fiches brouillon, soumises ou rejetées sont modifiables.",
+        });
       }
 
       const file_url =
@@ -138,10 +140,11 @@ const ExpenseClaimAttachmentController = {
 
       // (optionnel) vérifier statut fiche
       const claim = await ExpenseClaim.findByPk(row.expense_claim_id);
-      if (claim && claim.statut !== "draft") {
-        return res
-          .status(400)
-          .json({ message: "Suppression impossible : fiche non brouillon." });
+      if (claim && !["draft", "submitted", "rejected"].includes(claim.statut)) {
+        return res.status(400).json({
+          message:
+            "Suppression impossible : seules les fiches brouillon, soumises ou rejetées sont modifiables.",
+        });
       }
 
       await row.destroy();
